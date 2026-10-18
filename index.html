@@ -647,6 +647,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     return st;
   }
 
+  const handleLen = () => clamp(Math.min(W, H) / K * 0.3, 100, 160) * K;
   const inBed = (x, y) => x > G.x0 + 8 * K && x < G.x1 - 8 * K && y > G.y0 + 8 * K && y < G.y1 - 8 * K;
   function hitStone(x, y) {
     for (let k = stones.length - 1; k >= 0; k--) if (stoneN(stones[k], x, y) < 1.12) return stones[k];
@@ -725,7 +726,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   const cloudsEl = document.getElementById("clouds"), leavesEl = document.getElementById("leaves"), warmEl = document.getElementById("warm");
 
   // ---------- Overlay: stones, rake, grains, petals ----------
-  const rakeVis = { on: false, ghost: false, x: 0, y: 0, dx: 1, dy: 0, a: 0, n: 5 };
+  const rakeVis = { on: false, ghost: false, x: 0, y: 0, dx: 1, dy: 0, hx: 0, hy: 0, a: 0, n: 5 };
   function drawTop(now) {
     const c = tctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -749,12 +750,18 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       c.restore();
     }
     if (rakeVis.a > 0.01) {
-      const { x, y, dx, dy } = rakeVis, nx = -dy, ny = dx, R = rakeVis.n * SP / 2 + 3 * K, L = 150 * K;
-      c.save(); c.globalAlpha = rakeVis.a * (rakeVis.ghost ? 0.5 : 0.9);
-      const hg = c.createLinearGradient(x, y, x + dx * L, y + dy * L);
-      hg.addColorStop(0, "rgba(104, 74, 46, .9)"); hg.addColorStop(1, "rgba(104, 74, 46, 0)");
-      c.strokeStyle = hg; c.lineWidth = 4.5 * K; c.lineCap = "round";
-      c.beginPath(); c.moveTo(x + dx * 3 * K, y + dy * 3 * K); c.lineTo(x + dx * L, y + dy * L); c.stroke();
+      const { x, y, dx, dy, hx, hy } = rakeVis, nx = -dy, ny = dx, R = rakeVis.n * SP / 2 + 3 * K;
+      c.save(); c.globalAlpha = rakeVis.a * (rakeVis.ghost ? 0.5 : 0.92);
+      c.lineCap = "round";
+      c.strokeStyle = "rgba(50, 34, 18, .22)"; c.lineWidth = 5 * K;
+      c.beginPath(); c.moveTo(x + 2 * K, y + 3 * K); c.lineTo(hx + 2 * K, hy + 3 * K); c.stroke();
+      c.strokeStyle = "#8a6440"; c.lineWidth = 4 * K;
+      c.beginPath(); c.moveTo(x + dx * 3 * K, y + dy * 3 * K); c.lineTo(hx, hy); c.stroke();
+      c.strokeStyle = "rgba(255, 232, 196, .3)"; c.lineWidth = 1.2 * K;
+      c.beginPath(); c.moveTo(x + dx * 3 * K - ny * K, y + dy * 3 * K + nx * K); c.lineTo(hx - ny * K, hy + nx * K); c.stroke();
+      const gl = Math.min(16 * K, Math.hypot(hx - x, hy - y) * 0.3);
+      c.strokeStyle = "#4a3320"; c.lineWidth = 5 * K;
+      c.beginPath(); c.moveTo(hx - dx * gl, hy - dy * gl); c.lineTo(hx, hy); c.stroke();
       c.strokeStyle = "rgba(60, 40, 22, .3)"; c.lineWidth = 6 * K;
       c.beginPath(); c.moveTo(x - nx * R + 2 * K, y - ny * R + 3 * K); c.lineTo(x + nx * R + 2 * K, y + ny * R + 3 * K); c.stroke();
       c.strokeStyle = "#7a5634"; c.lineWidth = 5 * K;
@@ -1183,21 +1190,22 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     if (sweep) sweepStep(dt);
 
     if (rk) {
-      if (!rk.has && Math.hypot(rk.tx - rk.sx, rk.ty - rk.sy) >= 4 * K) {
-        const d0 = Math.hypot(rk.tx - rk.x, rk.ty - rk.y) || 1;
-        rk.dx = (rk.tx - rk.x) / d0; rk.dy = (rk.ty - rk.y) / d0; rk.has = true;
-      }
-      if (rk.has) {
-        const k = 1 - Math.pow(0.86, dt / 16.7);
-        const dist = strokeTo(rk, rk.x + (rk.tx - rk.x) * k, rk.y + (rk.ty - rk.y) * k, rk.n, "rake");
+      // The finger holds the end of the handle; the head is dragged behind it at handle length.
+      const L = handleLen(), vx = rk.tx - rk.x, vy = rk.ty - rk.y, d = Math.hypot(vx, vy);
+      if (d > L) {
+        if (!rk.has) { rk.dx = vx / d; rk.dy = vy / d; rk.has = true; }
+        const dist = strokeTo(rk, rk.tx - vx / d * L, rk.ty - vy / d * L, rk.n, "rake");
         if (dist) {
           feedSpeed(dist / K, dt);
           rk.travel += dist / K;
           if (rk.travel > 40) { rk.travel = 0; haptic(2); }
         }
-        Object.assign(rakeVis, { x: rk.x, y: rk.y, dx: rk.dx, dy: rk.dy, on: true, ghost: false, n: rk.n });
       }
-      if (rk.releasing && (!rk.has || Math.hypot(rk.tx - rk.x, rk.ty - rk.y) < 1.5 * K)) {
+      if (d > 0.5) {
+        const hx = rk.tx - rk.x, hy = rk.ty - rk.y, hl = Math.hypot(hx, hy) || 1;
+        Object.assign(rakeVis, { x: rk.x, y: rk.y, dx: hx / hl, dy: hy / hl, hx: rk.tx, hy: rk.ty, on: true, ghost: false, n: rk.n });
+      }
+      if (rk.releasing) {
         if (rk.has) moundStamp(rk.x, rk.y, rk.dx, rk.dy, rk.n);
         rk = null; rakeVis.on = false;
       }
@@ -1208,7 +1216,8 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       const u = Math.min(1, demo.t / demo.dur), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
       const p = demo.path(e);
       strokeTo(demo.s, p.x, p.y, 5, "rake");
-      Object.assign(rakeVis, { x: p.x, y: p.y, dx: demo.s.dx, dy: demo.s.dy, on: u < 1, ghost: true, n: 5 });
+      const hL = handleLen();
+      Object.assign(rakeVis, { x: p.x, y: p.y, dx: demo.s.dx, dy: demo.s.dy, hx: p.x + demo.s.dx * hL, hy: p.y + demo.s.dy * hL, on: u < 1, ghost: true, n: 5 });
       if (u >= 1) { moundStamp(p.x, p.y, demo.s.dx, demo.s.dy, 5); demo = null; }
     }
 
