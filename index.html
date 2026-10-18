@@ -15,7 +15,7 @@
   --sand: #d8d1c1;
   --ink: #2e2c28;
   --ink-soft: rgba(46, 44, 40, .66);
-  --tray: rgba(36, 34, 31, .82);
+  --tray: rgba(40, 30, 22, .58);
   --tray-fg: #f1ebde;
   --tray-dim: #bcb5a6;
   --moss: #9aad6e;
@@ -38,14 +38,22 @@ body {
 #garden canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .fx { position: fixed; pointer-events: none; }
 #clouds { left: -40vw; top: -40vh; width: 180vw; height: 180vh; will-change: transform; }
-#leaves { top: -6vmin; right: -8vmin; width: 62vmin; height: 62vmin; mix-blend-mode: multiply; opacity: .4; transform-origin: 85% 10%; will-change: transform; }
+#leaves { top: -6vmin; right: -8vmin; width: 62vmin; height: 62vmin; mix-blend-mode: multiply; opacity: .3; transform-origin: 85% 10%; will-change: transform; }
 #warm { inset: 0; background: rgb(255, 176, 96); mix-blend-mode: soft-light; opacity: .05; }
+#sun { inset: 0; background: radial-gradient(ellipse 90% 70% at 18% 8%, rgba(255, 240, 214, .55), rgba(255, 240, 214, 0) 70%), radial-gradient(ellipse 80% 70% at 92% 96%, rgba(70, 52, 30, .35), rgba(70, 52, 30, 0) 70%); mix-blend-mode: soft-light; }
+#frame { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#probe { position: fixed; top: 0; left: 0; width: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); visibility: hidden; pointer-events: none; }
+header, #dock { transition: opacity 2.4s ease; }
+body.zen header, body.zen #dock { opacity: 0; }
+body.zen #dock { pointer-events: none; }
+body.zen #dock * { pointer-events: none; }
 #vignette { inset: 0; background: radial-gradient(ellipse at 48% 46%, rgba(0,0,0,0) 52%, rgba(58,42,22,.20) 100%); }
 
 header {
   position: fixed; top: 0; left: 0; right: 0;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  --inset: clamp(14px, 3vw, 34px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + var(--inset) + 18px);
+  padding-left: calc(max(16px, env(safe-area-inset-left, 0px)) + var(--inset));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   pointer-events: none;
   display: grid; gap: 6px;
@@ -76,14 +84,14 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   pointer-events: none;
 }
 #dock > * { transition: opacity .5s ease, transform .25s ease; }
-#dock.drawing > * { opacity: .35; }
+#dock.drawing > * { opacity: .2; }
 .tray {
   pointer-events: auto;
   background: var(--tray);
   -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
   color: var(--tray-fg);
   border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(40, 28, 12, .28);
+  box-shadow: 0 6px 18px rgba(30, 18, 8, .22);
   display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch;
   gap: 2px; padding: 6px; max-width: 100%;
 }
@@ -92,7 +100,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   appearance: none; border: 0; background: transparent; color: var(--tray-dim);
   font: 500 11.5px/1 var(--font-body); letter-spacing: .04em;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  min-width: 58px; min-height: 58px; padding: 9px 6px 8px; border-radius: 12px; cursor: pointer;
+  min-width: 54px; min-height: 54px; padding: 8px 5px 7px; border-radius: 12px; cursor: pointer;
   transition: color .2s, background-color .2s;
   touch-action: manipulation;
 }
@@ -139,10 +147,13 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   <canvas id="sand"></canvas>
   <canvas id="top"></canvas>
 </div>
+<canvas id="frame"></canvas>
 <canvas id="clouds" class="fx" width="120" height="80"></canvas>
 <canvas id="leaves" class="fx" width="420" height="420"></canvas>
 <div id="warm" class="fx"></div>
+<div id="sun" class="fx"></div>
 <div id="vignette" class="fx"></div>
+<div id="probe"></div>
 
 <header>
   <h1><span class="kanji">枯山水</span><span class="latin">Karesansui</span></h1>
@@ -221,8 +232,11 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   // ---------- Field state (all coordinates in sand cells; K cells per CSS px) ----------
-  let K = 1, W = 0, H = 0, SP = 10;
-  let hgt, grain, mask, ao, img, pix;
+  const GAP = 14;            // groove spacing in CSS px
+  let K = 1, W = 0, H = 0, SP = GAP;
+  let hgt, grain, mask, ao, baseMask, baseAo, img, pix;
+  let G = { x0: 0, y0: 0, x1: 1, y1: 1 }; // the sand bed inside its border, in cells
+  const frameCv = document.getElementById("frame"), fctx = frameCv.getContext("2d");
   let dirty = null;
   let tool = "rake", tines = 5, soundOn = true;
   const stones = [];
@@ -240,9 +254,9 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     const g = new Float32Array(w * h);
     const cs = 7 * K, inv = 1 / cs;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      let v = (Math.random() * 2 - 1) * 0.04 + (vnoise(x * inv, y * inv, 5) - 0.5) * 0.05;
+      let v = (Math.random() * 2 - 1) * 0.028 + (vnoise(x * inv, y * inv, 5) - 0.5) * 0.04;
       const r = Math.random();
-      if (r < 0.010) v -= 0.15; else if (r < 0.017) v += 0.09;
+      if (r < 0.008) v -= 0.10; else if (r < 0.014) v += 0.06;
       g[y * w + x] = v;
     }
     return g;
@@ -251,23 +265,23 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   function linePattern(x, y) {
     const cx = x / K, cy = y / K;
     const yy = cy + Math.sin(cx / 230) * 9 + Math.sin(cx / 91 + 1.3) * 2.2;
-    return -Math.cos(TAU * yy / 10);
+    return -Math.cos(TAU * yy / GAP);
   }
 
   function shadeRect(x0, y0, x1, y1) {
-    const h = hgt, g = grain, o = ao, d = pix, w = W, gk = 0.19 * K;
+    const h = hgt, g = grain, o = ao, d = pix, w = W, gk = 0.13 * K;
     for (let y = y0; y < y1; y++) {
       const yr = y * w, ym = (y > 0 ? y - 1 : y) * w, yp = (y < H - 1 ? y + 1 : y) * w;
       for (let x = x0; x < x1; x++) {
         const i = yr + x;
         const dx = h[x < w - 1 ? i + 1 : i] - h[x > 0 ? i - 1 : i];
         const dy = h[yp + x] - h[ym + x];
-        let s = (0.88 + (dx * 0.55 + dy * 0.8) * gk + h[i] * 0.03 + g[i]) * o[i];
-        s = s < 0.38 ? 0.38 : s > 1.22 ? 1.22 : s;
+        let s = (0.92 + (dx * 0.55 + dy * 0.8) * gk + h[i] * 0.02 + g[i]) * o[i];
+        s = s < 0.45 ? 0.45 : s > 1.15 ? 1.15 : s;
         const j = i << 2;
-        d[j] = 224 * s;
-        d[j + 1] = 215 * s;
-        d[j + 2] = 197 * s + (1 - s) * 26;
+        d[j] = 228 * s + (1 - s) * 6;
+        d[j + 1] = 219 * s;
+        d[j + 2] = 199 * s + (1 - s) * 18;
       }
     }
   }
@@ -285,7 +299,11 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const oldK = K, old = hgt, ow = W, oh = H;
     K = Math.max(1, Math.min(dpr, Math.sqrt(3.0e6 / (cw * ch))));
-    W = Math.round(cw * K); H = Math.round(ch * K); SP = 10 * K;
+    W = Math.round(cw * K); H = Math.round(ch * K); SP = GAP * K;
+    const probe = getComputedStyle(document.getElementById("probe"));
+    const safeT = parseFloat(probe.paddingTop) || 0, safeB = parseFloat(probe.paddingBottom) || 0;
+    const side = clamp(cw * 0.03, 14, 34);
+    G = { x0: Math.round(side * K), y0: Math.round((safeT + side) * K), x1: Math.round((cw - side) * K), y1: Math.round((ch - safeB - 108) * K) };
     const r = oldK / K;
     hgt = new Float32Array(W * H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -295,7 +313,17 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     grain = makeGrain(W, H);
     mask = new Uint8Array(W * H);
     ao = new Float32Array(W * H);
+    baseMask = new Uint8Array(W * H);
+    baseAo = new Float32Array(W * H).fill(1);
+    const edge = 7 * K;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (x < G.x0 || x >= G.x1 || y < G.y0 || y >= G.y1) { baseMask[i] = 1; continue; }
+      const dt = Math.min(x - G.x0, y - G.y0, G.x1 - 1 - x), db = G.y1 - 1 - y;
+      baseAo[i] = Math.min(1 - 0.42 * Math.exp(-dt / edge), 1 - 0.25 * Math.exp(-db / (4 * K)));
+    }
     sandCv.width = W; sandCv.height = H;
+    frameCv.width = W; frameCv.height = H;
     topCv.width = W; topCv.height = H;
     img = sctx.createImageData(W, H); pix = img.data;
     for (let i = 3; i < pix.length; i += 4) pix[i] = 255;
@@ -306,7 +334,68 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       renderStone(s);
     }
     rebuildMask();
+    drawFrame();
     markDirty(0, 0, W, H);
+  }
+
+  // ---------- The garden's border: moss bank, curb stones, and the engawa we sit on ----------
+  function drawFrame() {
+    const im = fctx.createImageData(W, H), d = im.data, f = 1 / K;
+    const plankH = 21 * K, beamH = 12 * K;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (x >= G.x0 && x < G.x1 && y >= G.y0 && y < G.y1) continue;
+      const j = (y * W + x) * 4;
+      let r, g, b;
+      if (y >= G.y1) {
+        const yy = y - G.y1;
+        if (yy < beamH) {
+          const t = yy / beamH, gr = fbm(x * f * 0.01, y * f * 0.5, 3, 41);
+          const l = (t < 0.15 ? 1.25 : 1 - t * 0.25) * (0.85 + gr * 0.3);
+          r = 92 * l; g = 64 * l; b = 42 * l;
+        } else {
+          const k = Math.floor((yy - beamH) / plankH), py = (yy - beamH) - k * plankH;
+          const tone = 0.88 + hash(k, 3, 9) * 0.22;
+          const gr = fbm(x * f * 0.006 + k * 13, py * f * 0.35 + k * 7, 4, 43);
+          let l = tone * (0.8 + gr * 0.42) * (1 - 0.18 * (yy / (H - G.y1)));
+          if (py < 1.2 * K) l *= 0.55; else if (py < 2.4 * K) l *= 1.08;
+          const joint = Math.floor((x * f + hash(k, 1, 5) * 400) / 420);
+          const jx = (x * f + hash(k, 1, 5) * 400) - joint * 420;
+          if (jx < 1.2) l *= 0.6;
+          r = 150 * l; g = 108 * l; b = 72 * l;
+        }
+      } else {
+        const m = fbm(x * f * 0.07, y * f * 0.07, 4, 51), fine = vnoise(x * f * 0.6, y * f * 0.6, 53);
+        const t = m * 0.75 + fine * 0.25, l = 0.7 + t * 0.6;
+        r = (58 + 40 * t) * l; g = (70 + 44 * t) * l; b = (38 + 22 * t) * l;
+      }
+      d[j] = r; d[j + 1] = g; d[j + 2] = b; d[j + 3] = 255;
+    }
+    fctx.putImageData(im, 0, 0);
+    // cut granite kerb between the moss and the sand
+    const c = fctx, T = 10 * K;
+    let k = 0;
+    const run = (ax, ay, bx, by) => {
+      const len = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / len, uy = (by - ay) / len;
+      c.save(); c.translate(ax, ay); c.rotate(Math.atan2(uy, ux));
+      let s = -T / 2;
+      while (s < len + T / 2) {
+        const L = Math.min((34 + hash(k, 0, 3) * 46) * K, len + T / 2 - s), v = 0.88 + hash(k, 4, 3) * 0.2;
+        c.shadowColor = "rgba(40, 30, 18, .35)"; c.shadowBlur = 5 * K; c.shadowOffsetX = 0; c.shadowOffsetY = 2 * K;
+        const g = c.createLinearGradient(0, -T / 2, 0, T / 2);
+        g.addColorStop(0, `rgb(${168 * v | 0},${164 * v | 0},${154 * v | 0})`);
+        g.addColorStop(0.5, `rgb(${140 * v | 0},${136 * v | 0},${127 * v | 0})`);
+        g.addColorStop(1, `rgb(${112 * v | 0},${108 * v | 0},${100 * v | 0})`);
+        c.fillStyle = g; c.fillRect(s, -T / 2, L - 1.2 * K, T);
+        c.shadowColor = "transparent";
+        c.fillStyle = "rgba(255, 250, 240, .10)";
+        for (let q = 0; q < L / K * 0.6; q++) c.fillRect(s + hash(k, q, 11) * (L - 2 * K), -T / 2 + hash(q, k, 13) * T, K, K);
+        s += L; k++;
+      }
+      c.restore();
+    };
+    run(G.x0, G.y0, G.x1, G.y0);
+    run(G.x0, G.y0, G.x0, G.y1);
+    run(G.x1, G.y0, G.x1, G.y1);
   }
 
   // ---------- Sand tools ----------
@@ -501,7 +590,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   function rebuildMask() {
-    mask.fill(0); ao.fill(1);
+    mask.set(baseMask); ao.set(baseAo);
     for (const st of stones) {
       if (st.lifted) continue;
       const m = Math.max(st.a, st.b) * 1.15 + 26 * K, rAvg = (st.a + st.b) / 2, aoR = 5 * K;
@@ -519,7 +608,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   function stoneRings(st) {
-    const s = SP, ring = 5 * s, rAvg = (st.a + st.b) / 2, rim = 0.15 * rAvg;
+    const s = SP, ring = 4 * s, rAvg = (st.a + st.b) / 2, rim = 0.15 * rAvg;
     const m = Math.max(st.a, st.b) * 1.15 + ring + s;
     const x0 = Math.max(0, (st.x - m) | 0), x1 = Math.min(W, (st.x + m + 1) | 0);
     const y0 = Math.max(0, (st.y - m) | 0), y1 = Math.min(H, (st.y + m + 1) | 0);
@@ -558,6 +647,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     return st;
   }
 
+  const inBed = (x, y) => x > G.x0 + 8 * K && x < G.x1 - 8 * K && y > G.y0 + 8 * K && y < G.y1 - 8 * K;
   function hitStone(x, y) {
     for (let k = stones.length - 1; k >= 0; k--) if (stoneN(stones[k], x, y) < 1.12) return stones[k];
     return null;
@@ -762,6 +852,8 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     lfo.connect(lf1).connect(wbp.frequency); lfo.connect(lf2).connect(wg.gain); lfo.start();
 
     nextGrainT = ac.currentTime;
+    A.padSend = gain(0.6); A.padSend.connect(A.send);
+    schedulePad(1500);
     scheduleDrop(9000 + Math.random() * 8000);
     scheduleRin(45000 + Math.random() * 30000);
   }
@@ -788,7 +880,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     A.rakeG.gain.setTargetAtTime(2.8 * I * (smoothing ? 0.75 : 1), t, rising ? 0.08 : 0.25);
     A.lowG.gain.setTargetAtTime(0.15 * I, t, rising ? 0.08 : 0.25);
     A.bp.frequency.setTargetAtTime((smoothing ? 600 : 700) + 400 * I, t, 0.15);
-    const px = sweep ? sweep.x : ptr ? ptr.x : demo ? rakeVis.x : W / 2;
+    const px = sweep ? sweep.x : rk ? rk.x : ptr ? ptr.x : demo ? rakeVis.x : W / 2;
     if (A.pan.pan) A.pan.pan.setTargetAtTime(clamp((px / W) * 2 - 1, -1, 1) * 0.5, t, 0.15);
     // grains, scheduled 50 ms ahead
     const rate = I > 0.03 ? 20 + 100 * I : 0;
@@ -862,6 +954,19 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       }
     }
   }
+  let padTimer = 0;
+  const PAD = [146.83, 174.61, 196.0, 220.0, 261.63, 293.66];
+  function padNote() {
+    const t = ac.currentTime + 0.1, f = PAD[(Math.random() * PAD.length) | 0], dur = rand(11, 17);
+    const lp = filt("lowpass", 900), g = gain(0), p = panner(rand(-0.35, 0.35));
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.022, t + dur * 0.4); g.gain.linearRampToValueAtTime(0, t + dur);
+    lp.connect(g); g.connect(p).connect(A.bus); g.connect(A.padSend);
+    for (const [mul, det, a, type] of [[1, -0.6, 1, "sine"], [1, 0.6, 1, "sine"], [2, 0.3, 0.12, "triangle"]]) {
+      const o = ac.createOscillator(); o.type = type; o.frequency.value = f * mul + det;
+      const og = gain(a); o.connect(og).connect(lp); o.start(t); o.stop(t + dur + 0.1);
+    }
+  }
+  function schedulePad(ms) { clearTimeout(padTimer); padTimer = setTimeout(() => { if (soundOn && !document.hidden) padNote(); schedulePad(rand(5000, 9000)); }, ms); }
   function scheduleDrop(ms) { clearTimeout(dropTimer); dropTimer = setTimeout(() => { if (soundOn && !document.hidden) drop(); scheduleDrop(rand(20000, 40000)); }, ms); }
   function scheduleRin(ms) { clearTimeout(rinTimer); rinTimer = setTimeout(() => { if (soundOn && !document.hidden) rin(); scheduleRin(rand(70000, 120000)); }, ms); }
 
@@ -892,7 +997,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   // ---------- Pointer input ----------
-  let ptr = null, demo = null, sweep = null, interacted = false;
+  let ptr = null, rk = null, demo = null, sweep = null, interacted = false;
   const usedTools = new Set();
   function pos(e) {
     const r = garden.getBoundingClientRect();
@@ -908,11 +1013,12 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     try { garden.setPointerCapture(e.pointerId); } catch (_) {}
     ptr = { id: e.pointerId, x: p.x, y: p.y, sx: p.x, sy: p.y, t: e.timeStamp, dx: 1, dy: 0, has: false, moved: false, travel: 0 };
     dock.classList.add("drawing");
+    if (tool === "rake") rk = { x: p.x, y: p.y, sx: p.x, sy: p.y, tx: p.x, ty: p.y, dx: 1, dy: 0, has: false, releasing: false, travel: 0, n: tines };
     if (tool === "ripple") { ptr.r = 6 * K; ptr.rPrev = 0; ptr.rings = 0; ptr.growing = true; rippleStamp(p.x, p.y, 0, ptr.r); }
     else if (tool === "stone") {
       const st = hitStone(p.x, p.y);
       if (st) { ptr.stone = st; ptr.ox = st.x - p.x; ptr.oy = st.y - p.y; }
-      else { addStone(p.x, p.y); stoneSound(1, p.x); haptic([8, 30, 4]); }
+      else if (inBed(p.x, p.y)) { addStone(p.x, p.y); stoneSound(1, p.x); haptic([8, 30, 4]); }
     } else if (tool === "smooth") smoothStamp(p.x, p.y);
   });
 
@@ -927,10 +1033,11 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
         rebuildMask();
         haptic(4);
       }
-      if (ptr.moved) { st.x = clamp(p.x + ptr.ox, 0, W); st.y = clamp(p.y + ptr.oy, 0, H); }
+      if (ptr.moved) { st.x = clamp(p.x + ptr.ox, G.x0 + 10 * K, G.x1 - 10 * K); st.y = clamp(p.y + ptr.oy, G.y0 + 10 * K, G.y1 - 10 * K); }
       return;
     }
     if (tool === "ripple") return;
+    if (tool === "rake") { if (rk) { rk.tx = p.x; rk.ty = p.y; } return; }
     if (tool === "rake" && !ptr.has) {
       const d0 = Math.hypot(p.x - ptr.x, p.y - ptr.y);
       if (d0 < 4 * K) return;
@@ -945,7 +1052,6 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     if (ptr.travel > 40) { ptr.travel = 0; haptic(2); }
     if (tool === "rake") {
       Object.assign(rakeVis, { x: p.x, y: p.y, dx: ptr.dx, dy: ptr.dy, on: true, ghost: false, n: tines });
-      if (!reduceMotion && css / Math.max(dt, 4) > 0.7 && grains.length < 60) spawnGrains(p.x, p.y, ptr.dx, ptr.dy, tines * SP / 2);
     }
   }
 
@@ -962,9 +1068,10 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       if (ptr.moved) { st.lifted = false; rebuildMask(); stoneRings(st); st.bounce = 1; stoneSound(0.8, st.x); haptic([6, 30, 3]); }
       else { st.lifted = true; liftStone(st); stones.splice(stones.indexOf(st), 1); rebuildMask(); stoneSound(0.5, st.x, true); haptic(4); }
     }
-    if (tool === "rake" && ptr.has) moundStamp(ptr.x, ptr.y, ptr.dx, ptr.dy, tines);
+    if (rk) rk.releasing = true;
     if (!usedTools.has(tool)) { usedTools.add(tool); hintEl.style.opacity = 0; }
-    ptr = null; rakeVis.on = false;
+    ptr = null;
+    if (!rk) rakeVis.on = false;
     dock.classList.remove("drawing");
   }
   garden.addEventListener("pointerup", endPointer);
@@ -1045,12 +1152,16 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   function startDemo() {
     if (interacted || reduceMotion) return;
     const portrait = H > W;
-    const y0 = H * (portrait ? 0.27 : 0.24), xa = W * 0.1, xb = W * (portrait ? 0.9 : 0.55);
+    const y0 = H * (portrait ? 0.27 : 0.25), xa = W * 0.12, xb = W * (portrait ? 0.86 : 0.55);
     demo = { t: 0, dur: 2800, path: e => ({ x: xa + (xb - xa) * e, y: y0 + Math.sin(e * TAU * 0.9) * H * 0.04 }) };
     const p = demo.path(0);
     demo.s = { x: p.x, y: p.y, dx: 1, dy: 0 };
   }
   setTimeout(startDemo, 2200);
+
+  let lastActivity = performance.now();
+  const wake = () => { lastActivity = performance.now(); document.body.classList.remove("zen"); };
+  ["pointerdown", "pointermove", "keydown"].forEach(ev => window.addEventListener(ev, wake, { passive: true }));
 
   // ---------- Main loop ----------
   let lastT = performance.now(), t0 = lastT;
@@ -1070,6 +1181,27 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     }
 
     if (sweep) sweepStep(dt);
+
+    if (rk) {
+      if (!rk.has && Math.hypot(rk.tx - rk.sx, rk.ty - rk.sy) >= 4 * K) {
+        const d0 = Math.hypot(rk.tx - rk.x, rk.ty - rk.y) || 1;
+        rk.dx = (rk.tx - rk.x) / d0; rk.dy = (rk.ty - rk.y) / d0; rk.has = true;
+      }
+      if (rk.has) {
+        const k = 1 - Math.pow(0.86, dt / 16.7);
+        const dist = strokeTo(rk, rk.x + (rk.tx - rk.x) * k, rk.y + (rk.ty - rk.y) * k, rk.n, "rake");
+        if (dist) {
+          feedSpeed(dist / K, dt);
+          rk.travel += dist / K;
+          if (rk.travel > 40) { rk.travel = 0; haptic(2); }
+        }
+        Object.assign(rakeVis, { x: rk.x, y: rk.y, dx: rk.dx, dy: rk.dy, on: true, ghost: false, n: rk.n });
+      }
+      if (rk.releasing && (!rk.has || Math.hypot(rk.tx - rk.x, rk.ty - rk.y) < 1.5 * K)) {
+        if (rk.has) moundStamp(rk.x, rk.y, rk.dx, rk.dy, rk.n);
+        rk = null; rakeVis.on = false;
+      }
+    }
 
     if (demo) {
       demo.t += dt;
@@ -1116,6 +1248,8 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       leavesEl.style.transform = `rotate(${sway}deg)`;
       warmEl.style.opacity = (0.04 + 0.035 * Math.sin(el / 600 * TAU)).toFixed(3);
     }
+
+    if (!ptr && !rk && now - lastActivity > 8000) document.body.classList.add("zen");
 
     flush();
     drawTop(now);
