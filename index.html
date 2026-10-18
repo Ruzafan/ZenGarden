@@ -10,15 +10,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap">
 <style>
-/* Layout: full-bleed raked-sand canvas; a quiet ink title top-left; a floating charcoal tool tray at the bottom edge */
+/* Layout: full-bleed raked-sand canvas under drifting cloud and leaf shadows; quiet ink title top-left; charcoal tool tray floating at the bottom */
 :root {
   --sand: #d8d1c1;
   --ink: #2e2c28;
-  --ink-soft: rgba(46, 44, 40, .62);
-  --tray: rgba(36, 34, 31, .80);
-  --tray-fg: #efe9dc;
-  --tray-dim: #a39c8d;
-  --moss: #95a86a;
+  --ink-soft: rgba(46, 44, 40, .66);
+  --tray: rgba(36, 34, 31, .82);
+  --tray-fg: #f1ebde;
+  --tray-dim: #bcb5a6;
+  --moss: #9aad6e;
   --font-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
   --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
@@ -32,17 +32,15 @@ body {
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#garden {
-  position: fixed; inset: 0;
-  touch-action: none;
-  cursor: crosshair;
-}
+#garden { position: fixed; inset: 0; touch-action: none; cursor: crosshair; }
 #garden canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-#vignette {
-  position: fixed; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(60,45,25,.16) 100%);
-}
+.fx { position: fixed; pointer-events: none; }
+#clouds { left: -40vw; top: -40vh; width: 180vw; height: 180vh; will-change: transform; }
+#leaves { top: -6vmin; right: -8vmin; width: 62vmin; height: 62vmin; mix-blend-mode: multiply; opacity: .4; transform-origin: 85% 10%; will-change: transform; }
+#warm { inset: 0; background: rgb(255, 176, 96); mix-blend-mode: soft-light; opacity: .05; }
+#vignette { inset: 0; background: radial-gradient(ellipse at 48% 46%, rgba(0,0,0,0) 52%, rgba(58,42,22,.20) 100%); }
 
 header {
   position: fixed; top: 0; left: 0; right: 0;
@@ -50,26 +48,23 @@ header {
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   pointer-events: none;
-  display: grid; gap: 4px;
+  display: grid; gap: 6px;
 }
 h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: clamp(22px, 3.2vw, 30px);
-  letter-spacing: .02em;
-  line-height: 1.1;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(22px, 3.2vw, 30px); letter-spacing: .02em; line-height: 1.1;
   display: flex; align-items: baseline; gap: .45em;
   text-wrap: balance;
-  text-shadow: 0 0 8px var(--sand);
+  text-shadow: 0 0 10px var(--sand);
 }
 h1 .kanji { font-weight: 500; letter-spacing: .12em; }
 h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); }
 #hint {
   margin: 0; font-size: 14px; color: var(--ink-soft);
-  text-shadow: 0 0 6px var(--sand), 0 0 2px var(--sand);
   max-width: 34ch; line-height: 1.45;
-  transition: opacity .4s ease;
+  text-shadow: 0 0 6px var(--sand), 0 0 2px var(--sand);
+  transition: opacity .8s ease;
 }
 
 #dock {
@@ -80,49 +75,52 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   pointer-events: none;
 }
+#dock > * { transition: opacity .5s ease, transform .25s ease; }
+#dock.drawing > * { opacity: .35; }
 .tray {
   pointer-events: auto;
   background: var(--tray);
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
   color: var(--tray-fg);
   border-radius: 18px;
   box-shadow: 0 10px 30px rgba(40, 28, 12, .28);
   display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch;
-  gap: 2px; padding: 6px;
-  max-width: 100%;
+  gap: 2px; padding: 6px; max-width: 100%;
 }
 .tray .sep { width: 1px; background: rgba(239,233,220,.16); margin: 8px 4px; }
 .tool {
   appearance: none; border: 0; background: transparent; color: var(--tray-dim);
   font: 500 11.5px/1 var(--font-body); letter-spacing: .04em;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  min-width: 58px; padding: 9px 6px 8px; border-radius: 12px; cursor: pointer;
+  min-width: 58px; min-height: 58px; padding: 9px 6px 8px; border-radius: 12px; cursor: pointer;
   transition: color .2s, background-color .2s;
+  touch-action: manipulation;
 }
-.tool svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tool svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .tool:hover { color: var(--tray-fg); }
 .tool[aria-pressed="true"] { color: var(--tray-fg); background: rgba(239,233,220,.12); }
 .tool[aria-pressed="true"] .dot { opacity: 1; }
 .tool .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--moss); opacity: 0; margin-top: -2px; }
 .tool:focus-visible, .chip:focus-visible { outline: 2px solid var(--moss); outline-offset: 1px; }
+#t-new .ring { stroke: var(--moss); stroke-width: 2; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; transition: stroke-dashoffset .2s ease, opacity .2s; }
+#t-new.holding .ring { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset .8s linear; }
 
 .tines {
   pointer-events: auto;
   display: flex; align-items: center; gap: 4px;
-  padding: 5px 6px 5px 14px; border-radius: 999px;
+  padding: 4px 5px 4px 14px; border-radius: 999px;
   background: var(--tray); color: var(--tray-dim);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   font-size: 12px; letter-spacing: .06em;
-  transition: opacity .25s, transform .25s;
 }
-.tines.off { opacity: 0; transform: translateY(6px); pointer-events: none; }
+.tines.off { opacity: 0 !important; transform: translateY(6px); pointer-events: none; }
 .tines span { margin-right: 4px; }
 .chip {
   appearance: none; border: 0; cursor: pointer;
   background: transparent; color: var(--tray-dim);
   font: 500 13px/1 var(--font-body); font-variant-numeric: tabular-nums;
-  min-width: 34px; height: 28px; border-radius: 999px;
+  min-width: 40px; height: 36px; border-radius: 999px;
+  touch-action: manipulation;
 }
 .chip[aria-pressed="true"] { background: rgba(239,233,220,.16); color: var(--tray-fg); }
 
@@ -131,7 +129,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   .tray .sep { margin-inline: 1px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tines, #hint, .tool { transition: none; }
+  #dock > *, #hint, .tool { transition: none; }
 }
 </style>
 </head>
@@ -141,7 +139,10 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   <canvas id="sand"></canvas>
   <canvas id="top"></canvas>
 </div>
-<div id="vignette"></div>
+<canvas id="clouds" class="fx" width="120" height="80"></canvas>
+<canvas id="leaves" class="fx" width="420" height="420"></canvas>
+<div id="warm" class="fx"></div>
+<div id="vignette" class="fx"></div>
 
 <header>
   <h1><span class="kanji">枯山水</span><span class="latin">Karesansui</span></h1>
@@ -156,30 +157,30 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     <button class="chip" data-tines="8" aria-pressed="false">8</button>
   </div>
   <nav class="tray" aria-label="Herramientas">
-    <button class="tool" id="t-rake" data-tool="rake" aria-pressed="true" title="Rastrillo (1)">
+    <button class="tool" data-tool="rake" aria-pressed="true" title="Rastrillo (1)">
       <svg viewBox="0 0 24 24"><path d="M12 2v11"/><path d="M4 13h16"/><path d="M5 13v5M9 13v6M12 13v6M15 13v6M19 13v5"/></svg>
       Rastrillo<i class="dot"></i>
     </button>
-    <button class="tool" id="t-ripple" data-tool="ripple" aria-pressed="false" title="Ondas (2)">
+    <button class="tool" data-tool="ripple" aria-pressed="false" title="Ondas (2)">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9"/></svg>
       Ondas<i class="dot"></i>
     </button>
-    <button class="tool" id="t-stone" data-tool="stone" aria-pressed="false" title="Piedra (3)">
-      <svg viewBox="0 0 24 24"><path d="M5 16.5c-1.6-3.4.6-8 4.6-9.3 4-1.4 8.4.4 9.6 3.8 1.1 3.1-.9 6.6-5.2 7.4-3.7.7-7.7.6-9-1.9z"/><path d="M3 20.5h18"/></svg>
+    <button class="tool" data-tool="stone" aria-pressed="false" title="Piedra (3)">
+      <svg viewBox="0 0 24 24"><path d="M4.5 17l1.8-6.2 4.6-3.6 5.4.6 3.6 4.4.6 4.8z"/><path d="M3 20.5h18"/></svg>
       Piedra<i class="dot"></i>
     </button>
-    <button class="tool" id="t-smooth" data-tool="smooth" aria-pressed="false" title="Alisar (4)">
+    <button class="tool" data-tool="smooth" aria-pressed="false" title="Alisar (4)">
       <svg viewBox="0 0 24 24"><path d="M3 15c3-2.5 6-2.5 9 0s6 2.5 9 0"/><path d="M3 9.5c3-1.5 6-1.5 9 0s6 1.5 9 0" opacity=".45"/></svg>
       Alisar<i class="dot"></i>
     </button>
     <i class="sep" aria-hidden="true"></i>
     <button class="tool" id="t-sound" aria-pressed="true" title="Sonido (S)">
-      <svg viewBox="0 0 24 24" id="ico-sound"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="w" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path class="w" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4"/><path class="x" d="M16 9.5l5 5M21 9.5l-5 5" style="display:none"/></svg>
       Sonido<i class="dot"></i>
     </button>
-    <button class="tool" id="t-clear" title="Alisar todo el jardín">
-      <svg viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 4v4h4"/></svg>
-      Empezar<i class="dot"></i>
+    <button class="tool" id="t-new" title="Mantén pulsado para rastrillar todo el jardín de nuevo">
+      <svg viewBox="0 0 24 24"><circle class="ring" cx="12" cy="12" r="11" pathLength="100" transform="rotate(-90 12 12)"/><path d="M5 9h14M5 12h14M5 15h14" opacity=".9"/></svg>
+      Nuevo<i class="dot"></i>
     </button>
   </nav>
 </div>
@@ -188,25 +189,45 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
 (() => {
   "use strict";
   const garden = document.getElementById("garden");
-  const sandCv = document.getElementById("sand");
-  const sctx = sandCv.getContext("2d");
-  const topCv = document.getElementById("top");
-  const tctx = topCv.getContext("2d");
+  const sandCv = document.getElementById("sand"), sctx = sandCv.getContext("2d");
+  const topCv = document.getElementById("top"), tctx = topCv.getContext("2d");
   const hintEl = document.getElementById("hint");
+  const dock = document.getElementById("dock");
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const SP = 10;            // distance between grooves, in px
   const TAU = Math.PI * 2;
-  let W = 0, H = 0, DPR = 1;
-  let hgt, grain, mask, img, pix;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const smin = (a, b, k) => { const h = clamp(0.5 + 0.5 * (b - a) / k, 0, 1); return b + (a - b) * h - k * h * (1 - h); };
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const haptic = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (_) {} };
+
+  // ---------- Value noise ----------
+  function hash(ix, iy, seed) {
+    let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 1442695041)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+  function vnoise(x, y, seed) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = hash(ix, iy, seed), b = hash(ix + 1, iy, seed), c = hash(ix, iy + 1, seed), d = hash(ix + 1, iy + 1, seed);
+    return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy;
+  }
+  function fbm(x, y, oct, seed) {
+    let s = 0, amp = 0.5, norm = 0;
+    for (let o = 0; o < oct; o++) { s += vnoise(x, y, seed + o * 17) * amp; norm += amp; x *= 2.03; y *= 2.03; amp *= 0.5; }
+    return s / norm;
+  }
+
+  // ---------- Field state (all coordinates in sand cells; K cells per CSS px) ----------
+  let K = 1, W = 0, H = 0, SP = 10;
+  let hgt, grain, mask, ao, img, pix;
   let dirty = null;
   let tool = "rake", tines = 5, soundOn = true;
   const stones = [];
+  const LX = -0.5, LY = -0.66, LZ = 0.56; // light from the top-left
 
-  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
-
-  // ---------- Sand height field ----------
   function markDirty(x0, y0, x1, y1) {
     x0 = Math.max(0, Math.floor(x0) - 1); y0 = Math.max(0, Math.floor(y0) - 1);
     x1 = Math.min(W, Math.ceil(x1) + 2); y1 = Math.min(H, Math.ceil(y1) + 2);
@@ -217,40 +238,32 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
 
   function makeGrain(w, h) {
     const g = new Float32Array(w * h);
-    const cs = 7, gw = Math.ceil(w / cs) + 2, gh = Math.ceil(h / cs) + 2;
-    const coarse = new Float32Array(gw * gh);
-    for (let i = 0; i < coarse.length; i++) coarse[i] = Math.random() * 2 - 1;
-    for (let y = 0; y < h; y++) {
-      const fy = y / cs, iy = fy | 0, ty = fy - iy;
-      for (let x = 0; x < w; x++) {
-        const fx = x / cs, ix = fx | 0, tx = fx - ix;
-        const a = coarse[iy * gw + ix], b = coarse[iy * gw + ix + 1];
-        const c = coarse[(iy + 1) * gw + ix], d = coarse[(iy + 1) * gw + ix + 1];
-        const cv = (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
-        let v = (Math.random() * 2 - 1) * 0.045 + cv * 0.025;
-        const r = Math.random();
-        if (r < 0.012) v -= 0.16; else if (r < 0.02) v += 0.10;
-        g[y * w + x] = v;
-      }
+    const cs = 7 * K, inv = 1 / cs;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let v = (Math.random() * 2 - 1) * 0.04 + (vnoise(x * inv, y * inv, 5) - 0.5) * 0.05;
+      const r = Math.random();
+      if (r < 0.010) v -= 0.15; else if (r < 0.017) v += 0.09;
+      g[y * w + x] = v;
     }
     return g;
   }
 
   function linePattern(x, y) {
-    const yy = y + Math.sin(x / 230) * 9 + Math.sin(x / 91 + 1.3) * 2.2;
-    return -Math.cos(TAU * yy / SP);
+    const cx = x / K, cy = y / K;
+    const yy = cy + Math.sin(cx / 230) * 9 + Math.sin(cx / 91 + 1.3) * 2.2;
+    return -Math.cos(TAU * yy / 10);
   }
 
   function shadeRect(x0, y0, x1, y1) {
-    const h = hgt, g = grain, d = pix, w = W;
+    const h = hgt, g = grain, o = ao, d = pix, w = W, gk = 0.19 * K;
     for (let y = y0; y < y1; y++) {
       const yr = y * w, ym = (y > 0 ? y - 1 : y) * w, yp = (y < H - 1 ? y + 1 : y) * w;
       for (let x = x0; x < x1; x++) {
         const i = yr + x;
         const dx = h[x < w - 1 ? i + 1 : i] - h[x > 0 ? i - 1 : i];
         const dy = h[yp + x] - h[ym + x];
-        let s = 0.88 + (dx * 0.55 + dy * 0.8) * 0.19 + h[i] * 0.03 + g[i];
-        s = s < 0.42 ? 0.42 : s > 1.22 ? 1.22 : s;
+        let s = (0.88 + (dx * 0.55 + dy * 0.8) * gk + h[i] * 0.03 + g[i]) * o[i];
+        s = s < 0.38 ? 0.38 : s > 1.22 ? 1.22 : s;
         const j = i << 2;
         d[j] = 224 * s;
         d[j + 1] = 215 * s;
@@ -268,40 +281,45 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   function setup(keep) {
-    const nw = Math.max(1, Math.round(garden.clientWidth));
-    const nh = Math.max(1, Math.round(garden.clientHeight));
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    const old = hgt, ow = W, oh = H;
-    W = nw; H = nh;
+    const cw = Math.max(1, garden.clientWidth), ch = Math.max(1, garden.clientHeight);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const oldK = K, old = hgt, ow = W, oh = H;
+    K = Math.max(1, Math.min(dpr, Math.sqrt(3.0e6 / (cw * ch))));
+    W = Math.round(cw * K); H = Math.round(ch * K); SP = 10 * K;
+    const r = oldK / K;
     hgt = new Float32Array(W * H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      hgt[y * W + x] = (keep && old && x < ow && y < oh) ? old[y * ow + x] : linePattern(x, y);
+      const ox = Math.round(x * r), oy = Math.round(y * r);
+      hgt[y * W + x] = (keep && old && ox < ow && oy < oh) ? old[oy * ow + ox] : linePattern(x, y);
     }
     grain = makeGrain(W, H);
     mask = new Uint8Array(W * H);
+    ao = new Float32Array(W * H);
     sandCv.width = W; sandCv.height = H;
-    topCv.width = Math.round(W * DPR); topCv.height = Math.round(H * DPR);
-    img = sctx.createImageData(W, H);
-    pix = img.data;
+    topCv.width = W; topCv.height = H;
+    img = sctx.createImageData(W, H); pix = img.data;
     for (let i = 3; i < pix.length; i += 4) pix[i] = 255;
-    for (const s of stones) { s.x = clamp(s.x, 0, W); s.y = clamp(s.y, 0, H); }
-    for (const s of stones) renderStone(s);
+    const sc = K / oldK;
+    for (const s of stones) {
+      if (keep && sc !== 1) { s.x *= sc; s.y *= sc; s.a *= sc; s.b *= sc; }
+      s.x = clamp(s.x, 0, W); s.y = clamp(s.y, 0, H);
+      renderStone(s);
+    }
     rebuildMask();
     markDirty(0, 0, W, H);
   }
 
-  // ---------- Tools on the sand ----------
-  function rakeStamp(cx, cy, dx, dy, len) {
-    const nx = -dy, ny = dx, s = SP, R = tines * s / 2;
-    const half = len / 2 + 1.6, ext = R + s, off = tines % 2 === 0 ? 0.5 : 0;
+  // ---------- Sand tools ----------
+  function rakeStamp(cx, cy, dx, dy, len, n) {
+    const nx = -dy, ny = dx, s = SP, R = n * s / 2;
+    const half = len / 2 + 1.6 * K, ext = R + s, off = n % 2 === 0 ? 0.5 : 0;
     const x0 = Math.max(0, (cx - ext) | 0), x1 = Math.min(W, (cx + ext + 1) | 0);
     const y0 = Math.max(0, (cy - ext) | 0), y1 = Math.min(H, (cy + ext + 1) | 0);
     const inner = R - s * 0.5, outer = R + s * 0.6;
     for (let y = y0; y < y1; y++) {
       const py = y - cy;
       for (let x = x0; x < x1; x++) {
-        const px = x - cx;
-        const v = px * dx + py * dy;
+        const px = x - cx, v = px * dx + py * dy;
         if (v > half || v < -half) continue;
         const u = px * nx + py * ny, au = u < 0 ? -u : u;
         if (au > outer) continue;
@@ -311,6 +329,21 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
         const w = au <= inner ? 0.7 : 0.7 * (1 - smooth(inner, outer, au));
         hgt[i] += (pat - hgt[i]) * w;
       }
+    }
+    markDirty(x0, y0, x1, y1);
+  }
+
+  // A small ridge of pushed sand where the rake lifts off
+  function moundStamp(cx, cy, dx, dy, n) {
+    const nx = -dy, ny = dx, R = n * SP / 2, ext = R + SP;
+    const x0 = Math.max(0, (cx - ext) | 0), x1 = Math.min(W, (cx + ext + 1) | 0);
+    const y0 = Math.max(0, (cy - ext) | 0), y1 = Math.min(H, (cy + ext + 1) | 0);
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const px = x - cx, py = y - cy, v = px * dx + py * dy, u = Math.abs(px * nx + py * ny);
+      const i = y * W + x;
+      if (mask[i] || v < -2 * K || v > 7 * K) continue;
+      const t = (v - 2.5 * K) / (2.2 * K);
+      hgt[i] += 0.7 * Math.exp(-t * t) * (1 - smooth(R - SP * 0.5, R + SP * 0.4, u));
     }
     markDirty(x0, y0, x1, y1);
   }
@@ -328,15 +361,14 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
         const i = y * W + x;
         if (mask[i]) continue;
         const pat = -Math.cos(TAU * d / s);
-        const w = 1 - smooth(edge, outer, d);
-        hgt[i] += (pat - hgt[i]) * w;
+        hgt[i] += (pat - hgt[i]) * (1 - smooth(edge, outer, d));
       }
     }
     markDirty(x0, y0, x1, y1);
   }
 
   function smoothStamp(cx, cy) {
-    const R = 28;
+    const R = 28 * K;
     const x0 = Math.max(0, (cx - R) | 0), x1 = Math.min(W, (cx + R + 1) | 0);
     const y0 = Math.max(0, (cy - R) | 0), y1 = Math.min(H, (cy + R + 1) | 0);
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
@@ -344,167 +376,204 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       if (d > R) continue;
       const i = y * W + x;
       if (mask[i]) continue;
-      hgt[i] *= 1 - 0.32 * (1 - smooth(R * 0.45, R, d));
+      hgt[i] *= 1 - 0.3 * (1 - smooth(R * 0.45, R, d));
     }
     markDirty(x0, y0, x1, y1);
   }
 
   // ---------- Stones ----------
   const TONES = [
-    { hi: "#9a9894", mid: "#64625e", lo: "#2f2e2c" },  // slate
-    { hi: "#b3aa9b", mid: "#7c7466", lo: "#3e3a33" },  // warm granite
-    { hi: "#8f948d", mid: "#5b605a", lo: "#272a27" },  // green-grey river stone
+    [112, 111, 106],  // slate
+    [134, 125, 110],  // warm granite
+    [84, 86, 82],     // basalt
+    [104, 109, 99],   // green-grey river stone
   ];
 
   function makeStone(x, y, r) {
-    const asp = 1 + Math.random() * 0.35;
-    const st = {
-      x, y, a: r * asp, b: r / Math.sqrt(asp) , rot: Math.random() * Math.PI,
-      ph: [Math.random() * TAU, Math.random() * TAU, Math.random() * TAU],
-      tone: TONES[(Math.random() * TONES.length) | 0],
-      moss: Math.random() < 0.55, seed: Math.random() * 1e6, cv: null, R: 0,
+    const asp = rand(1.05, 1.45);
+    const planes = [];
+    const np = 3 + ((Math.random() * 3) | 0);
+    for (let k = 0; k < np; k++) {
+      const a = Math.random() * TAU;
+      planes.push({ ux: Math.cos(a), uy: Math.sin(a), c: rand(0.55, 0.92), k: rand(0.45, 0.8) });
+    }
+    return {
+      x, y, a: r * asp, b: r / Math.sqrt(asp), rot: Math.random() * Math.PI,
+      ph: [Math.random() * TAU, Math.random() * TAU, Math.random() * TAU, Math.random() * TAU],
+      tone: TONES[(Math.random() * TONES.length) | 0], planes,
+      moss: Math.random() < 0.6, seed: (Math.random() * 1e6) | 0,
+      body: null, shadow: null, R: 0, lift: 0, bounce: 0,
     };
-    return st;
   }
 
   function stoneRho(st, t) {
-    return 1 + 0.06 * Math.sin(2 * t + st.ph[0]) + 0.04 * Math.sin(3 * t + st.ph[1]) + 0.02 * Math.sin(5 * t + st.ph[2]);
+    return 1 + 0.07 * Math.sin(2 * t + st.ph[0]) + 0.045 * Math.sin(3 * t + st.ph[1])
+             + 0.025 * Math.sin(5 * t + st.ph[2]) + 0.012 * Math.sin(9 * t + st.ph[3]);
   }
-  function stonePath(c, st, scale) {
+  // Normalised distance: < 1 inside the outline, 1 on it.
+  function stoneN(st, x, y) {
+    const px = x - st.x, py = y - st.y, cr = Math.cos(st.rot), sr = Math.sin(st.rot);
+    const ex = (px * cr + py * sr) / st.a, ey = (-px * sr + py * cr) / st.b;
+    return Math.sqrt(ex * ex + ey * ey) / stoneRho(st, Math.atan2(ey, ex));
+  }
+  function stonePath(c, st, ox, oy) {
     c.beginPath();
     const cr = Math.cos(st.rot), sr = Math.sin(st.rot);
-    for (let k = 0; k <= 64; k++) {
-      const t = k / 64 * TAU, rho = stoneRho(st, t) * scale;
+    for (let k = 0; k <= 96; k++) {
+      const t = k / 96 * TAU, rho = stoneRho(st, t);
       const lx = Math.cos(t) * st.a * rho, ly = Math.sin(t) * st.b * rho;
-      const X = lx * cr - ly * sr, Y = lx * sr + ly * cr;
+      const X = ox + lx * cr - ly * sr, Y = oy + lx * sr + ly * cr;
       k ? c.lineTo(X, Y) : c.moveTo(X, Y);
     }
     c.closePath();
   }
-  function rng(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
 
   function renderStone(st) {
-    const R = Math.max(st.a, st.b) * 1.3 + 28;
+    const m = Math.max(st.a, st.b), rAvg = (st.a + st.b) / 2;
+    const R = Math.ceil(m * 1.32 + 18 * K), S = 2 * R;
     st.R = R;
-    const cv = document.createElement("canvas");
-    cv.width = cv.height = Math.ceil(R * 2 * DPR);
-    const c = cv.getContext("2d");
-    c.scale(DPR, DPR); c.translate(R, R);
-    const rand = rng(st.seed);
-    // cast shadow
-    c.save();
-    c.shadowColor = "rgba(52, 38, 20, .55)"; c.shadowBlur = 16; c.shadowOffsetX = 8; c.shadowOffsetY = 10;
-    stonePath(c, st, 1); c.fillStyle = st.tone.lo; c.fill();
-    c.restore();
-    // moss collar
-    if (st.moss) {
-      const greens = ["#6f7f45", "#86975a", "#9cae6c", "#5d6c3a", "#a9b97a"];
-      const cr = Math.cos(st.rot), sr = Math.sin(st.rot);
-      const start = rand() * TAU, span = TAU * (0.45 + rand() * 0.5);
-      for (let k = 0; k < 420; k++) {
-        const t = start + rand() * span, rho = stoneRho(st, t) * (0.96 + Math.pow(rand(), 1.6) * 0.22);
-        const lx = Math.cos(t) * st.a * rho, ly = Math.sin(t) * st.b * rho;
-        c.fillStyle = greens[(rand() * greens.length) | 0];
-        c.globalAlpha = 0.55 + rand() * 0.45;
-        c.beginPath(); c.arc(lx * cr - ly * sr, lx * sr + ly * cr, 1.2 + rand() * 2.6, 0, TAU); c.fill();
+    const seed = st.seed, f = 1 / K;
+    const cr = Math.cos(st.rot), sr = Math.sin(st.rot);
+    const N = S * S, hb = new Float32Array(N), nn = new Float32Array(N);
+    // 1) height of a carved stone: shouldered dome cut by a few flat faces, with fine pitting
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const px = x + 0.5 - R, py = y + 0.5 - R;
+      const ex = (px * cr + py * sr) / st.a, ey = (-px * sr + py * cr) / st.b;
+      const n = Math.sqrt(ex * ex + ey * ey) / stoneRho(st, Math.atan2(ey, ex));
+      const i = y * S + x;
+      nn[i] = n;
+      if (n > 1.03) continue;
+      let h = Math.pow(Math.max(0, 1 - n * n), 0.35);
+      for (const p of st.planes) h = smin(h, p.c - (p.ux * ex + p.uy * ey) * p.k, 0.07);
+      h += (fbm(x * f * 0.09, y * f * 0.09, 3, seed) - 0.5) * 0.09;
+      h += (vnoise(x * f * 0.6, y * f * 0.6, seed + 9) - 0.5) * 0.018;
+      hb[i] = Math.max(0, h) * m * 0.75;
+    }
+    const body = document.createElement("canvas"); body.width = body.height = S;
+    const bc = body.getContext("2d"), id = bc.createImageData(S, S), d = id.data;
+    const [tr, tg, tb] = st.tone;
+    const hx = LX, hy = LY, hz = LZ + 1, hl = Math.hypot(hx, hy, hz);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const i = y * S + x, n = nn[i];
+      let alpha = 0, r = 0, g = 0, b = 0, lightAmt = 0.85;
+      if (n < 1.03) {
+        const gx = (hb[x < S - 1 ? i + 1 : i] - hb[x > 0 ? i - 1 : i]) * 0.5;
+        const gy = (hb[y < S - 1 ? i + S : i] - hb[y > 0 ? i - S : i]) * 0.5;
+        const il = 1 / Math.hypot(gx, gy, 1);
+        const Nx = -gx * il, Ny = -gy * il, Nz = il;
+        const diff = Math.max(0, Nx * LX + Ny * LY + Nz * LZ);
+        const spec = Math.pow(Math.max(0, (Nx * hx + Ny * hy + Nz * hz) / hl), 8) * 0.08;
+        const tone = 1 + (fbm(x * f * 0.035, y * f * 0.035, 2, seed + 3) - 0.5) * 0.18;
+        const pit = 1 + (vnoise(x * f * 0.9, y * f * 0.9, seed + 4) - 0.5) * 0.12;
+        lightAmt = (0.3 + 0.8 * diff) * tone * pit;
+        const vein = fbm(x * f * 0.05, y * f * 0.05, 3, seed + 7);
+        const v = 1 - smooth(0.0, 0.014, Math.abs(vein - 0.5));
+        r = tr * lightAmt + 255 * spec + v * 26 * diff;
+        g = tg * lightAmt + 255 * spec + v * 25 * diff;
+        b = tb * lightAmt + 255 * spec + v * 22 * diff;
+        alpha = clamp((1 - n) * rAvg / (1.5 * K), 0, 1);
       }
-      c.globalAlpha = 1;
+      // moss cushions hugging the base
+      if (st.moss && n > 0.68 && n < 1.16) {
+        const patch = fbm(x * f * 0.028, y * f * 0.028, 2, seed + 11);
+        const fine = fbm(x * f * 0.32, y * f * 0.32, 2, seed + 13);
+        const t = patch * 0.72 + fine * 0.28;
+        const thr = 0.53 + (n > 1 ? (n - 1) / 0.16 * 0.22 : 0) + (n < 0.82 ? (0.82 - n) / 0.14 * 0.3 : 0);
+        const ma = smooth(thr, thr + 0.04, t);
+        if (ma > 0) {
+          const lit = (0.72 + (fine - 0.5) * 0.9) * (0.75 + 0.35 * Math.min(1, lightAmt)) * (0.82 + 0.18 * smooth(thr, thr + 0.12, t));
+          const mr = (95 + 30 * fine) * lit, mg = (107 + 31 * fine) * lit, mb = (63 + 22 * fine) * lit;
+          r = r * (1 - ma) + mr * ma; g = g * (1 - ma) + mg * ma; b = b * (1 - ma) + mb * ma;
+          if (alpha < ma) { const a0 = alpha; alpha = ma; if (a0 === 0) { r = mr; g = mg; b = mb; } }
+        }
+      }
+      const j = i << 2;
+      d[j] = r; d[j + 1] = g; d[j + 2] = b; d[j + 3] = alpha * 255;
     }
-    // body
-    c.save();
-    stonePath(c, st, 1); c.clip();
-    const m = Math.max(st.a, st.b);
-    const g = c.createRadialGradient(-st.a * 0.35, -st.b * 0.45, m * 0.05, 0, 0, m * 1.15);
-    g.addColorStop(0, st.tone.hi); g.addColorStop(0.5, st.tone.mid); g.addColorStop(1, st.tone.lo);
-    c.fillStyle = g; c.fillRect(-R, -R, 2 * R, 2 * R);
-    for (let k = 0; k < m * m * 0.5; k++) {
-      const x = (rand() * 2 - 1) * m * 1.1, y = (rand() * 2 - 1) * m * 1.1;
-      c.fillStyle = rand() < 0.5 ? "rgba(255,255,255,.10)" : "rgba(0,0,0,.14)";
-      c.fillRect(x, y, 1 + rand() * 1.4, 1 + rand() * 1.4);
-    }
-    // faint strata
-    c.strokeStyle = "rgba(255,255,255,.07)"; c.lineWidth = 1.2;
-    for (let k = 0; k < 3; k++) {
-      const off = (rand() * 2 - 1) * m * 0.6;
-      c.beginPath(); c.moveTo(-m, off); c.bezierCurveTo(-m * 0.3, off + (rand() - .5) * m * .5, m * 0.3, off + (rand() - .5) * m * .5, m, off + (rand() - .5) * m * .3); c.stroke();
-    }
-    const rim = c.createRadialGradient(0, 0, m * 0.6, 0, 0, m * 1.1);
-    rim.addColorStop(0, "rgba(0,0,0,0)"); rim.addColorStop(1, "rgba(0,0,0,.35)");
-    c.fillStyle = rim; c.fillRect(-R, -R, 2 * R, 2 * R);
-    c.restore();
-    st.cv = cv;
-  }
-
-  function stoneNorm(st, x, y) {
-    const px = x - st.x, py = y - st.y, cr = Math.cos(st.rot), sr = Math.sin(st.rot);
-    const lx = px * cr + py * sr, ly = -px * sr + py * cr;
-    return Math.sqrt((lx / st.a) ** 2 + (ly / st.b) ** 2);
+    bc.putImageData(id, 0, 0);
+    st.body = body;
+    // directional shadow: the silhouette smeared away from the light, darker where it meets the stone
+    const sh = document.createElement("canvas"); sh.width = sh.height = S;
+    const sc = sh.getContext("2d");
+    sc.fillStyle = "rgba(58, 50, 42, 0.08)";
+    for (let k = 1; k <= 9; k++) { stonePath(sc, st, R + k * 1.15 * K, R + k * 1.45 * K); sc.fill(); }
+    st.shadow = sh;
   }
 
   function rebuildMask() {
-    mask.fill(0);
+    mask.fill(0); ao.fill(1);
     for (const st of stones) {
-      const m = Math.max(st.a, st.b);
+      if (st.lifted) continue;
+      const m = Math.max(st.a, st.b) * 1.15 + 26 * K, rAvg = (st.a + st.b) / 2, aoR = 5 * K;
       const x0 = Math.max(0, (st.x - m) | 0), x1 = Math.min(W, (st.x + m + 1) | 0);
       const y0 = Math.max(0, (st.y - m) | 0), y1 = Math.min(H, (st.y + m + 1) | 0);
-      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (stoneNorm(st, x, y) < 0.9) mask[y * W + x] = 1;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const n = stoneN(st, x, y), i = y * W + x;
+        if (n < 0.97) mask[i] = 1;
+        const de = Math.max(0, (n - 1) * rAvg);
+        const v = 1 - 0.4 * Math.exp(-de / aoR);
+        if (v < ao[i]) ao[i] = v;
+      }
+      markDirty(x0, y0, x1, y1);
     }
   }
 
   function stoneRings(st) {
-    const s = SP, ring = 5 * s, rAvg = (st.a + st.b) / 2, m = Math.max(st.a, st.b) + ring + s;
+    const s = SP, ring = 5 * s, rAvg = (st.a + st.b) / 2, rim = 0.15 * rAvg;
+    const m = Math.max(st.a, st.b) * 1.15 + ring + s;
     const x0 = Math.max(0, (st.x - m) | 0), x1 = Math.min(W, (st.x + m + 1) | 0);
     const y0 = Math.max(0, (st.y - m) | 0), y1 = Math.min(H, (st.y + m + 1) | 0);
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
       const i = y * W + x;
-      const de = (stoneNorm(st, x, y) - 1) * rAvg;
+      const de = (stoneN(st, x, y) - 1) * rAvg;
       if (de > ring) continue;
-      if (de < 0) { if (mask[i]) hgt[i] = 0.5; continue; }
+      if (de < 0) { if (mask[i]) hgt[i] = 0.6; continue; }
       if (mask[i]) continue;
-      const pat = -Math.cos(TAU * (de - s * 0.5) / s);
-      const w = 1 - smooth(ring - s, ring, de);
-      hgt[i] += (pat - hgt[i]) * w;
+      let pat = -Math.cos(TAU * (de - s * 0.5) / s);
+      pat += 0.45 * (1 - smooth(0, rim, de));  // sand pushed up against the stone
+      hgt[i] += (pat - hgt[i]) * (1 - smooth(ring - s, ring, de));
     }
     markDirty(x0, y0, x1, y1);
   }
 
   function liftStone(st) {
-    const m = Math.max(st.a, st.b) * 1.05;
+    const m = Math.max(st.a, st.b) * 1.2;
     const x0 = Math.max(0, (st.x - m) | 0), x1 = Math.min(W, (st.x + m + 1) | 0);
     const y0 = Math.max(0, (st.y - m) | 0), y1 = Math.min(H, (st.y + m + 1) | 0);
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-      const n = stoneNorm(st, x, y);
-      if (n < 1.05) { const i = y * W + x; hgt[i] = -0.25 * (1 - smooth(0.7, 1.05, n)) + hgt[i] * smooth(0.7, 1.05, n) * 0.4; }
+      const n = stoneN(st, x, y);
+      if (n < 1.05) { const i = y * W + x, t = smooth(0.7, 1.05, n); hgt[i] = -0.3 * (1 - t) + hgt[i] * t * 0.5; }
     }
     markDirty(x0, y0, x1, y1);
   }
 
   function addStone(x, y, r) {
-    const base = clamp(Math.min(W, H) * 0.075, 26, 66);
-    const st = makeStone(x, y, r || base * (0.55 + Math.random() * 0.45));
+    const base = clamp(Math.min(W, H) / K * 0.075, 26, 66) * K;
+    const st = makeStone(x, y, r || base * rand(0.55, 1));
     stones.push(st);
     renderStone(st);
     rebuildMask();
     stoneRings(st);
+    st.bounce = 1;
     return st;
   }
 
   function hitStone(x, y) {
-    for (let k = stones.length - 1; k >= 0; k--) if (stoneNorm(stones[k], x, y) < 1.12) return stones[k];
+    for (let k = stones.length - 1; k >= 0; k--) if (stoneN(stones[k], x, y) < 1.12) return stones[k];
     return null;
   }
 
-  // ---------- Petals (ambient) ----------
+  // ---------- Ambient visuals ----------
   const petals = [];
-  let nextPetal = 2500;
+  let nextPetal = 9000;
   function spawnPetal() {
     const fromLeft = Math.random() < 0.7;
     petals.push({
-      x: fromLeft ? -20 : Math.random() * W * 0.8, y: fromLeft ? Math.random() * H * 0.6 : -20,
-      vx: 0.018 + Math.random() * 0.02, vy: 0.012 + Math.random() * 0.012,
+      x: fromLeft ? -20 * K : Math.random() * W * 0.8, y: fromLeft ? Math.random() * H * 0.6 : -20 * K,
+      vx: rand(0.016, 0.032) * K, vy: rand(0.010, 0.02) * K,
       rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 0.002,
-      ph: Math.random() * TAU, size: 5 + Math.random() * 4, life: 0,
-      land: 0.35 + Math.random() * 0.6, tone: Math.random() < 0.5 ? "#f2c9d0" : "#f6dde0",
+      ph: Math.random() * TAU, size: rand(4.5, 7.5) * K, life: 0,
+      land: rand(0.35, 0.95), tone: Math.random() < 0.5 ? "#f0c8cf" : "#f5dcdf",
     });
   }
   function drawPetal(c, p) {
@@ -516,57 +585,131 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     c.moveTo(0, -s);
     c.bezierCurveTo(s * 0.9, -s * 0.6, s * 0.7, s * 0.7, 0, s);
     c.bezierCurveTo(-s * 0.7, s * 0.7, -s * 0.9, -s * 0.6, 0, -s);
-    c.moveTo(0, -s); c.lineTo(-s * 0.18, -s * 0.72); c.lineTo(s * 0.18, -s * 0.72);
     c.fillStyle = p.tone; c.globalAlpha = p.alpha; c.fill();
     c.restore();
   }
 
-  // ---------- Overlay: stones, rake, petals ----------
-  const rakeVis = { on: false, x: 0, y: 0, dx: 1, dy: 0, a: 0 };
-  function drawTop() {
+  const grains = [];
+  function spawnGrains(x, y, dx, dy, R) {
+    const nx = -dy, ny = dx;
+    for (let k = 0; k < 2; k++) {
+      const side = Math.random() < 0.5 ? -1 : 1, u = side * R * rand(0.2, 1.05);
+      grains.push({
+        x: x + nx * u, y: y + ny * u,
+        vx: (dx * rand(0.01, 0.05) + nx * side * rand(0.01, 0.04)) * K,
+        vy: (dy * rand(0.01, 0.05) + ny * side * rand(0.01, 0.04)) * K,
+        life: 0, max: rand(220, 340), light: Math.random() < 0.5,
+      });
+    }
+  }
+
+  // Cloud shadows: low-res noise stretched across the screen, drifting slowly
+  (function drawClouds() {
+    const c = document.getElementById("clouds").getContext("2d");
+    const im = c.createImageData(120, 80);
+    for (let y = 0; y < 80; y++) for (let x = 0; x < 120; x++) {
+      const v = fbm(x * 0.045, y * 0.045, 4, 77), a = smooth(0.46, 0.72, v) * 0.13, j = (y * 120 + x) * 4;
+      im.data[j] = 66; im.data[j + 1] = 54; im.data[j + 2] = 40; im.data[j + 3] = a * 255;
+    }
+    c.putImageData(im, 0, 0);
+  })();
+
+  // Komorebi: soft shadows of a maple branch over one corner
+  (function drawLeaves() {
+    const c = document.getElementById("leaves").getContext("2d");
+    const S = 420;
+    c.strokeStyle = "rgba(92, 78, 60, .32)"; c.lineCap = "round";
+    const twig = (x0, y0, x1, y1, w) => { c.lineWidth = w; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2 + 10, (y0 + y1) / 2 + 12, x1, y1); c.stroke(); };
+    twig(S, 30, 170, 210, 9); twig(300, 95, 230, 330, 5); twig(240, 150, 90, 170, 4); twig(200, 185, 150, 300, 3.5);
+    const leaf = (x, y, r) => {
+      const g = c.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(92, 78, 60, .30)"); g.addColorStop(0.6, "rgba(92, 78, 60, .18)"); g.addColorStop(1, "rgba(92, 78, 60, 0)");
+      c.fillStyle = g;
+      c.beginPath();
+      for (let k = 0; k <= 10; k++) { const a = k / 10 * TAU, rr = (k % 2 ? 0.55 : 1) * r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+      c.fill();
+    };
+    const pts = [[170, 210], [230, 330], [90, 170], [150, 300], [300, 95], [255, 230], [205, 120], [120, 240]];
+    for (const [px, py] of pts) for (let k = 0; k < 9; k++) leaf(px + rand(-38, 38), py + rand(-38, 38), rand(14, 26));
+  })();
+  const cloudsEl = document.getElementById("clouds"), leavesEl = document.getElementById("leaves"), warmEl = document.getElementById("warm");
+
+  // ---------- Overlay: stones, rake, grains, petals ----------
+  const rakeVis = { on: false, ghost: false, x: 0, y: 0, dx: 1, dy: 0, a: 0, n: 5 };
+  function drawTop(now) {
     const c = tctx;
-    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, W, H);
     for (const p of petals) if (p.landed) drawPetal(c, p);
-    for (const st of stones) c.drawImage(st.cv, st.x - st.R, st.y - st.R, st.R * 2, st.R * 2);
-    if (rakeVis.a > 0.01) {
-      const { x, y, dx, dy } = rakeVis, nx = -dy, ny = dx, R = tines * SP / 2 + 3;
-      c.save(); c.globalAlpha = rakeVis.a * 0.9;
-      // handle
-      const hg = c.createLinearGradient(x, y, x + dx * 150, y + dy * 150);
-      hg.addColorStop(0, "rgba(104, 74, 46, .9)"); hg.addColorStop(1, "rgba(104, 74, 46, 0)");
-      c.strokeStyle = hg; c.lineWidth = 4.5; c.lineCap = "round";
-      c.beginPath(); c.moveTo(x + dx * 3, y + dy * 3); c.lineTo(x + dx * 150, y + dy * 150); c.stroke();
-      // head
-      c.strokeStyle = "rgba(60, 40, 22, .35)"; c.lineWidth = 6;
-      c.beginPath(); c.moveTo(x - nx * R + 2, y - ny * R + 3); c.lineTo(x + nx * R + 2, y + ny * R + 3); c.stroke();
-      c.strokeStyle = "#7a5634"; c.lineWidth = 5;
-      c.beginPath(); c.moveTo(x - nx * R, y - ny * R); c.lineTo(x + nx * R, y + ny * R); c.stroke();
-      c.strokeStyle = "rgba(255, 230, 190, .35)"; c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(x - nx * R - dx * 1.5, y - ny * R - dy * 1.5); c.lineTo(x + nx * R - dx * 1.5, y + ny * R - dy * 1.5); c.stroke();
+    for (const st of stones) {
+      const l = st.lift, R = st.R;
+      c.globalAlpha = 1 - 0.45 * l;
+      const sx = l * 7 * K, sy = l * 9 * K;
+      c.drawImage(st.shadow, st.x - R + sx, st.y - R + sy);
+      c.globalAlpha = 1;
+    }
+    for (const st of stones) {
+      const l = st.lift, R = st.R;
+      const bounce = st.bounce > 0 ? -0.03 * Math.sin(Math.PI * (1 - st.bounce)) : 0;
+      const sc = 1 + 0.05 * l + bounce;
+      c.save();
+      c.translate(st.x - l * 2 * K, st.y - l * 3 * K);
+      c.scale(sc, sc);
+      c.drawImage(st.body, -R, -R);
       c.restore();
     }
+    if (rakeVis.a > 0.01) {
+      const { x, y, dx, dy } = rakeVis, nx = -dy, ny = dx, R = rakeVis.n * SP / 2 + 3 * K, L = 150 * K;
+      c.save(); c.globalAlpha = rakeVis.a * (rakeVis.ghost ? 0.5 : 0.9);
+      const hg = c.createLinearGradient(x, y, x + dx * L, y + dy * L);
+      hg.addColorStop(0, "rgba(104, 74, 46, .9)"); hg.addColorStop(1, "rgba(104, 74, 46, 0)");
+      c.strokeStyle = hg; c.lineWidth = 4.5 * K; c.lineCap = "round";
+      c.beginPath(); c.moveTo(x + dx * 3 * K, y + dy * 3 * K); c.lineTo(x + dx * L, y + dy * L); c.stroke();
+      c.strokeStyle = "rgba(60, 40, 22, .3)"; c.lineWidth = 6 * K;
+      c.beginPath(); c.moveTo(x - nx * R + 2 * K, y - ny * R + 3 * K); c.lineTo(x + nx * R + 2 * K, y + ny * R + 3 * K); c.stroke();
+      c.strokeStyle = "#7a5634"; c.lineWidth = 5 * K;
+      c.beginPath(); c.moveTo(x - nx * R, y - ny * R); c.lineTo(x + nx * R, y + ny * R); c.stroke();
+      c.strokeStyle = "rgba(255, 230, 190, .35)"; c.lineWidth = 1.2 * K;
+      c.beginPath(); c.moveTo(x - nx * R - dx * 1.5 * K, y - ny * R - dy * 1.5 * K); c.lineTo(x + nx * R - dx * 1.5 * K, y + ny * R - dy * 1.5 * K); c.stroke();
+      c.restore();
+    }
+    for (const g of grains) {
+      c.globalAlpha = 1 - g.life / g.max;
+      c.fillStyle = g.light ? "#f2ecdf" : "#8d816d";
+      c.fillRect(g.x, g.y, 1.2 * K, 1.2 * K);
+    }
+    c.globalAlpha = 1;
     for (const p of petals) if (!p.landed) drawPetal(c, p);
   }
 
   // ---------- Audio ----------
-  let ac = null, master, rake = {}, audI = 0, audTarget = 0, lastMoveT = 0, bellTimer = 0;
+  let ac = null, A = {};
+  let audI = 0, audTarget = 0, speedEMA = 0, lastMoveT = 0, nextGrainT = 0;
+  let dropTimer = 0, rinTimer = 0;
 
-  function noiseBuffers() {
-    const sr = ac.sampleRate, len = sr * 2;
-    const white = ac.createBuffer(1, len, sr), wd = white.getChannelData(0);
-    for (let i = 0; i < len; i++) wd[i] = Math.random() * 2 - 1;
-    const brown = ac.createBuffer(1, len, sr), bd = brown.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; bd[i] = last * 3.5; }
-    const grains = ac.createBuffer(1, len, sr), gd = grains.getChannelData(0);
-    let i = 0;
-    while (i < len) {
-      i += Math.max(1, Math.floor(-Math.log(1 - Math.random()) * sr / 1100));
-      const amp = Math.pow(Math.random(), 2.2) * 0.9 + 0.08, dur = 12 + (Math.random() * 70) | 0;
-      for (let k = 0; k < dur && i + k < len; k++) gd[i + k] += (Math.random() * 2 - 1) * amp * Math.exp(-k / (dur * 0.28));
+  function buffers() {
+    const sr = ac.sampleRate;
+    const pink = ac.createBuffer(1, sr * 4, sr), pd = pink.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < pd.length; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+      b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+      pd[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
     }
-    return { white, brown, grains };
+    const brown = ac.createBuffer(1, sr * 4, sr), bd = brown.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bd.length; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; bd[i] = last * 3.5; }
+    const white = ac.createBuffer(1, sr, sr), wd = white.getChannelData(0);
+    for (let i = 0; i < wd.length; i++) wd[i] = Math.random() * 2 - 1;
+    // Reverb impulse: stereo noise with an exponential tail, darkened
+    const len = Math.floor(sr * 2.5), ir = ac.createBuffer(2, len, sr);
+    const a = 1 - Math.exp(-TAU * 4000 / sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch); let y = 0;
+      for (let i = 0; i < len; i++) { y += a * ((Math.random() * 2 - 1) - y); d[i] = y * Math.exp(-(i / sr) / 0.6); }
+    }
+    return { pink, brown, white, ir };
   }
 
   function loopSrc(buf, rate) {
@@ -575,116 +718,152 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     s.start(0, Math.random() * buf.duration);
     return s;
   }
+  function filt(type, f, q) { const n = ac.createBiquadFilter(); n.type = type; n.frequency.value = f; if (q != null) n.Q.value = q; return n; }
+  function gain(v) { const g = ac.createGain(); g.gain.value = v; return g; }
+  function panner(p) {
+    if (!ac.createStereoPanner) return gain(1);
+    const n = ac.createStereoPanner(); n.pan.value = p; return n;
+  }
 
   function initAudio() {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ac = new AC();
-    master = ac.createGain(); master.gain.value = soundOn ? 1 : 0; master.connect(ac.destination);
-    const b = noiseBuffers();
-    rake.bufs = b;
+    const B = A.buf = buffers();
+    const t = ac.currentTime;
 
-    // Raking: soft hiss + grain crackle + low scrape, driven by stroke speed
-    rake.pan = ac.createStereoPanner ? ac.createStereoPanner() : ac.createGain();
-    rake.pan.connect(master);
-    const hiss = loopSrc(b.white);
-    rake.bp = ac.createBiquadFilter(); rake.bp.type = "bandpass"; rake.bp.frequency.value = 2200; rake.bp.Q.value = 0.7;
-    rake.hissG = ac.createGain(); rake.hissG.gain.value = 0;
-    hiss.connect(rake.bp).connect(rake.hissG).connect(rake.pan);
-    rake.grainSrc = loopSrc(b.grains);
-    const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1100;
-    const pk = ac.createBiquadFilter(); pk.type = "peaking"; pk.frequency.value = 3800; pk.gain.value = 4; pk.Q.value = 0.8;
-    rake.grainG = ac.createGain(); rake.grainG.gain.value = 0;
-    rake.grainSrc.connect(hp).connect(pk).connect(rake.grainG).connect(rake.pan);
-    const low = loopSrc(b.brown);
-    const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520;
-    rake.lowG = ac.createGain(); rake.lowG.gain.value = 0;
-    low.connect(lp).connect(rake.lowG).connect(rake.pan);
+    // Master: dry + room reverb -> gentle compressor -> fade-in -> mute
+    A.mute = gain(soundOn ? 1 : 0); A.mute.connect(ac.destination);
+    A.out = gain(0); A.out.gain.setValueAtTime(0, t); A.out.gain.linearRampToValueAtTime(0.7, t + 3); A.out.connect(A.mute);
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 3; comp.knee.value = 10; comp.attack.value = 0.01; comp.release.value = 0.25;
+    comp.connect(A.out);
+    A.bus = gain(1);
+    const dry = gain(0.8), conv = ac.createConvolver(), wet = gain(0.22);
+    conv.buffer = B.ir;
+    A.bus.connect(dry).connect(comp);
+    A.bus.connect(conv); conv.connect(wet).connect(comp);
+    A.send = gain(1); A.send.connect(conv);
 
-    // Ambient wind
-    const wind = loopSrc(b.brown, 0.8);
-    const wlp = ac.createBiquadFilter(); wlp.type = "lowpass"; wlp.frequency.value = 380;
-    const wg = ac.createGain(); wg.gain.value = 0.045;
-    const lfo = ac.createOscillator(); lfo.frequency.value = 0.045;
-    const lfoG = ac.createGain(); lfoG.gain.value = 0.03;
-    lfo.connect(lfoG).connect(wg.gain); lfo.start();
-    wind.connect(wlp).connect(wg).connect(master);
-    const air = loopSrc(b.white, 0.5);
-    const abp = ac.createBiquadFilter(); abp.type = "bandpass"; abp.frequency.value = 900; abp.Q.value = 0.5;
-    const ag = ac.createGain(); ag.gain.value = 0.004;
-    const lfo2 = ac.createOscillator(); lfo2.frequency.value = 0.07;
-    const lfo2G = ac.createGain(); lfo2G.gain.value = 0.0035;
-    lfo2.connect(lfo2G).connect(ag.gain); lfo2.start();
-    air.connect(abp).connect(ag).connect(master);
+    // Rake bed: pink noise in the gravel band, plus a soft low drag
+    A.pan = panner(0); A.pan.connect(A.bus);
+    A.bp = filt("bandpass", 850, 1.0);
+    A.rakeG = gain(0);
+    loopSrc(B.pink).connect(A.bp).connect(filt("lowpass", 3500)).connect(A.rakeG).connect(A.pan);
+    A.lowG = gain(0);
+    loopSrc(B.brown).connect(filt("lowpass", 250)).connect(A.lowG).connect(A.pan);
 
-    scheduleBell(6000 + Math.random() * 6000);
+    // Wind: pink noise through a slowly wandering band
+    const wbp = filt("bandpass", 400, 0.5), wg = gain(0.05);
+    loopSrc(B.pink, 0.9).connect(wbp).connect(wg).connect(A.bus);
+    const lfo = ac.createOscillator(); lfo.frequency.value = 0.03;
+    const lf1 = gain(150), lf2 = gain(0.025);
+    lfo.connect(lf1).connect(wbp.frequency); lfo.connect(lf2).connect(wg.gain); lfo.start();
+
+    nextGrainT = ac.currentTime;
+    scheduleDrop(9000 + Math.random() * 8000);
+    scheduleRin(45000 + Math.random() * 30000);
   }
 
-  function scheduleBell(ms) {
-    clearTimeout(bellTimer);
-    bellTimer = setTimeout(() => { if (soundOn && !document.hidden) bell(); scheduleBell(22000 + Math.random() * 26000); }, ms);
+  // One grain of sand: a few milliseconds of band-limited noise
+  function sandGrain(t, amp, fLo, fHi, dest) {
+    const s = ac.createBufferSource(); s.buffer = A.buf.white;
+    const dur = rand(0.003, 0.015);
+    const bp = filt("bandpass", rand(fLo, fHi), 2);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(bp).connect(g).connect(dest || A.pan);
+    s.start(t, Math.random() * 0.9, dur + 0.01);
   }
 
-  function bell() {
+  function updateAudio(now, dt) {
     if (!ac) return;
-    const t = ac.currentTime + 0.05;
-    const base = [196, 220, 246.9, 293.7][(Math.random() * 4) | 0];
-    const out = ac.createGain(); out.gain.value = 0.06;
-    let node = out;
-    if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = Math.random() * 1.2 - 0.6; out.connect(p); node = p; }
-    node.connect(master);
-    const parts = [[1, 1, 9], [1.004, 0.5, 9], [2.01, 0.32, 6], [2.76, 0.22, 4.5], [4.07, 0.1, 3], [5.43, 0.05, 2]];
-    for (const [r, a, d] of parts) {
-      const o = ac.createOscillator(); o.frequency.value = base * r;
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.1);
+    const busy = (ptr && tool === "ripple" && ptr.growing) || sweep;
+    if (now - lastMoveT > 200 && !busy) { audTarget = 0; speedEMA *= 0.9; }
+    const rising = audTarget > audI;
+    audI += (audTarget - audI) * Math.min(1, dt / (rising ? 80 : 250));
+    const t = ac.currentTime, I = audI, smoothing = tool === "smooth";
+    A.rakeG.gain.setTargetAtTime(2.8 * I * (smoothing ? 0.75 : 1), t, rising ? 0.08 : 0.25);
+    A.lowG.gain.setTargetAtTime(0.15 * I, t, rising ? 0.08 : 0.25);
+    A.bp.frequency.setTargetAtTime((smoothing ? 600 : 700) + 400 * I, t, 0.15);
+    const px = sweep ? sweep.x : ptr ? ptr.x : demo ? rakeVis.x : W / 2;
+    if (A.pan.pan) A.pan.pan.setTargetAtTime(clamp((px / W) * 2 - 1, -1, 1) * 0.5, t, 0.15);
+    // grains, scheduled 50 ms ahead
+    const rate = I > 0.03 ? 20 + 100 * I : 0;
+    if (nextGrainT < t) nextGrainT = t;
+    while (rate && nextGrainT < t + 0.05) {
+      const amp = rand(0.05, 0.15) * (0.6 + I) * 5;
+      if (smoothing) sandGrain(nextGrainT, amp * 0.7, 700, 1400); else sandGrain(nextGrainT, amp, 1200, 2500);
+      nextGrainT += -Math.log(1 - Math.random()) / rate;
     }
   }
 
-  function thud(vol, x) {
-    if (!ac || !soundOn) return;
-    const t = ac.currentTime;
-    const out = ac.createGain(); out.gain.value = vol;
-    let node = out;
-    if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = clamp((x / W) * 2 - 1, -1, 1) * 0.5; out.connect(p); node = p; }
-    node.connect(master);
-    const o = ac.createOscillator(); o.type = "sine";
-    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.2);
-    const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.55, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-    o.connect(g).connect(out); o.start(t); o.stop(t + 0.55);
-    const n = ac.createBufferSource(); n.buffer = rake.bufs.grains; n.playbackRate.value = 0.8;
-    const nf = ac.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 2400; nf.Q.value = 0.6;
-    const ng = ac.createGain(); ng.gain.setValueAtTime(0.7, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-    n.connect(nf).connect(ng).connect(out); n.start(t, Math.random()); n.stop(t + 0.4);
-    const b = ac.createBufferSource(); b.buffer = rake.bufs.brown;
-    const bf = ac.createBiquadFilter(); bf.type = "lowpass"; bf.frequency.value = 700;
-    const bg = ac.createGain(); bg.gain.setValueAtTime(0.5, t); bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-    b.connect(bf).connect(bg).connect(out); b.start(t, Math.random()); b.stop(t + 0.3);
-  }
-
-  function updateAudio(now) {
-    if (!ac) return;
-    if (now - lastMoveT > 90 && !(ptr && tool === "ripple")) audTarget = 0;
-    audI += (audTarget - audI) * (audTarget > audI ? 0.35 : 0.12);
-    const I = audI, t = ac.currentTime, tc = 0.04;
-    const soft = tool === "smooth" ? 0.6 : 1;
-    rake.hissG.gain.setTargetAtTime(0.085 * I * soft, t, tc);
-    rake.grainG.gain.setTargetAtTime(0.6 * I * (tool === "smooth" ? 0.35 : 1), t, tc);
-    rake.lowG.gain.setTargetAtTime(0.42 * I, t, tc);
-    rake.bp.frequency.setTargetAtTime((tool === "smooth" ? 1100 : 1500) + 1700 * I + tines * 40, t, 0.08);
-    rake.grainSrc.playbackRate.setTargetAtTime(0.7 + 0.55 * I, t, 0.08);
-    if (rake.pan.pan && ptr) rake.pan.pan.setTargetAtTime(clamp((ptr.x / W) * 2 - 1, -1, 1) * 0.55, t, 0.1);
-  }
-
-  function feedSpeed(dist, dt) {
-    const v = dist / Math.max(dt, 4);
-    const k = tool === "rake" ? 0.55 + tines * 0.06 : 0.8;
-    audTarget = Math.pow(clamp(v / 1.3, 0, 1), 0.6) * k;
+  function feedSpeed(cssDist, dt) {
+    const v = cssDist / Math.max(dt, 4);
+    speedEMA += (v - speedEMA) * 0.15;
+    const k = tool === "rake" ? 0.6 + tines * 0.05 : 0.75;
+    audTarget = Math.pow(clamp(speedEMA / 1.2, 0, 1), 0.6) * k;
     lastMoveT = performance.now();
   }
+
+  function stoneSound(vol, x, removing) {
+    if (!ac) return;
+    const t = ac.currentTime + 0.005, p = panner(clamp((x / W) * 2 - 1, -1, 1) * 0.5), out = gain(vol);
+    out.connect(p).connect(A.bus);
+    if (!removing) {
+      const o = ac.createOscillator(); o.frequency.value = rand(220, 320);
+      const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.35, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+      o.connect(g).connect(out); o.start(t); o.stop(t + 0.1);
+    }
+    const n = ac.createBufferSource(); n.buffer = A.buf.pink;
+    const ng = ac.createGain(); ng.gain.setValueAtTime(removing ? 0.8 : 1.3, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    n.connect(filt("lowpass", 1500)).connect(ng).connect(out); n.start(t, Math.random() * 3); n.stop(t + 0.15);
+    const count = removing ? 3 : 4 + ((Math.random() * 5) | 0);
+    for (let k = 0; k < count; k++) sandGrain(t + 0.02 + Math.random() * 0.2, rand(0.15, 0.4), 1500, 3000, out);
+  }
+
+  function tick(x) {
+    if (!ac) return;
+    const p = panner(clamp((x / W) * 2 - 1, -1, 1) * 0.5); p.connect(A.bus);
+    sandGrain(ac.currentTime + 0.005, 0.25, 1600, 2000, p);
+  }
+
+  // Suikinkutsu: a water drop falling into a buried jar
+  function drop() {
+    const t0 = ac.currentTime + 0.05, n = Math.random() < 0.5 ? 1 : 2 + ((Math.random() * 2) | 0);
+    const p = panner(rand(-0.5, 0.5)); p.connect(A.bus);
+    const toRev = gain(0.9); p.connect(toRev).connect(A.send);
+    for (let k = 0; k < n; k++) {
+      const t = t0 + k * rand(0.45, 1.2), f = rand(1200, 2000);
+      const o = ac.createOscillator(); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.85, t + 0.03);
+      const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(g).connect(p); o.start(t); o.stop(t + 0.2);
+      for (const [r, a] of [[0.5, 0.012], [0.75, 0.008], [1.12, 0.005]]) {
+        const ro = ac.createOscillator(); ro.frequency.value = f * r;
+        const rg = ac.createGain(); rg.gain.setValueAtTime(0, t + 0.01); rg.gain.linearRampToValueAtTime(a, t + 0.02); rg.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+        ro.connect(rg).connect(p); ro.start(t + 0.01); ro.stop(t + 1.5);
+      }
+    }
+  }
+
+  // Rin: a small bowl struck softly, notes from one pentatonic scale
+  function rin() {
+    const t = ac.currentTime + 0.05;
+    const f0 = [293.66, 349.23, 392.0, 440.0, 523.25][(Math.random() * 5) | 0];
+    const lp = filt("lowpass", 3000), out = gain(0.03), p = panner(rand(-0.4, 0.4));
+    lp.connect(out).connect(p).connect(A.bus);
+    for (const [r, a, d] of [[1, 1, 8], [2.71, 0.4, 4], [5.15, 0.15, 2]]) {
+      for (const det of [-0.7, 0.7]) {
+        const o = ac.createOscillator(); o.frequency.value = f0 * r + det;
+        const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        o.connect(g).connect(lp); o.start(t); o.stop(t + d + 0.1);
+      }
+    }
+  }
+  function scheduleDrop(ms) { clearTimeout(dropTimer); dropTimer = setTimeout(() => { if (soundOn && !document.hidden) drop(); scheduleDrop(rand(20000, 40000)); }, ms); }
+  function scheduleRin(ms) { clearTimeout(rinTimer); rinTimer = setTimeout(() => { if (soundOn && !document.hidden) rin(); scheduleRin(rand(70000, 120000)); }, ms); }
 
   function setSound(on) {
     soundOn = on;
@@ -692,68 +871,87 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     btn.setAttribute("aria-pressed", on);
     btn.querySelector(".w").style.display = on ? "" : "none";
     btn.querySelector(".x").style.display = on ? "none" : "";
-    if (ac) master.gain.setTargetAtTime(on ? 1 : 0, ac.currentTime, 0.15);
+    if (ac) A.mute.gain.setTargetAtTime(on ? 1 : 0, ac.currentTime, 0.2);
+  }
+
+  // ---------- Strokes ----------
+  function strokeTo(s, x, y, n, kind) {
+    const ddx = x - s.x, ddy = y - s.y, dist = Math.hypot(ddx, ddy);
+    if (dist < 0.5) return 0;
+    const sx = ddx / dist, sy = ddy / dist;
+    let ndx = s.dx * 0.6 + sx * 0.4, ndy = s.dy * 0.6 + sy * 0.4;
+    const nl = Math.hypot(ndx, ndy) || 1; ndx /= nl; ndy /= nl;
+    const steps = Math.max(1, Math.ceil(dist / (2 * K))), len = dist / steps;
+    for (let k = 1; k <= steps; k++) {
+      const f = k / steps, cx = s.x + ddx * f, cy = s.y + ddy * f;
+      const dx = s.dx + (ndx - s.dx) * f, dy = s.dy + (ndy - s.dy) * f, l = Math.hypot(dx, dy) || 1;
+      if (kind === "rake") rakeStamp(cx, cy, dx / l, dy / l, len, n); else smoothStamp(cx, cy);
+    }
+    s.dx = ndx; s.dy = ndy; s.x = x; s.y = y;
+    return dist;
   }
 
   // ---------- Pointer input ----------
-  let ptr = null;
-  function pos(e) { const r = garden.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  let ptr = null, demo = null, sweep = null, interacted = false;
+  const usedTools = new Set();
+  function pos(e) {
+    const r = garden.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+  }
 
   garden.addEventListener("pointerdown", e => {
     if (ptr || (e.pointerType === "mouse" && e.button !== 0)) return;
+    interacted = true;
+    if (demo) { demo = null; rakeVis.on = false; rakeVis.ghost = false; }
     initAudio();
     const p = pos(e);
     try { garden.setPointerCapture(e.pointerId); } catch (_) {}
-    ptr = { id: e.pointerId, x: p.x, y: p.y, sx: p.x, sy: p.y, t: e.timeStamp, dx: 1, dy: 0, has: false, moved: false };
-    if (tool === "ripple") { ptr.r = 6; ptr.rPrev = 0; rippleStamp(p.x, p.y, 0, ptr.r); audTarget = 0.35; }
+    ptr = { id: e.pointerId, x: p.x, y: p.y, sx: p.x, sy: p.y, t: e.timeStamp, dx: 1, dy: 0, has: false, moved: false, travel: 0 };
+    dock.classList.add("drawing");
+    if (tool === "ripple") { ptr.r = 6 * K; ptr.rPrev = 0; ptr.rings = 0; ptr.growing = true; rippleStamp(p.x, p.y, 0, ptr.r); }
     else if (tool === "stone") {
       const st = hitStone(p.x, p.y);
       if (st) { ptr.stone = st; ptr.ox = st.x - p.x; ptr.oy = st.y - p.y; }
-      else { addStone(p.x, p.y); thud(0.9, p.x); }
+      else { addStone(p.x, p.y); stoneSound(1, p.x); haptic([8, 30, 4]); }
     } else if (tool === "smooth") smoothStamp(p.x, p.y);
   });
 
   function moveTo(p, ts) {
-    const ddx = p.x - ptr.x, ddy = p.y - ptr.y, dist = Math.hypot(ddx, ddy);
     if (tool === "stone") {
       const st = ptr.stone;
       if (!st) return;
-      if (!ptr.moved && Math.hypot(p.x - ptr.sx, p.y - ptr.sy) > 5) {
-        ptr.moved = true;
+      if (!ptr.moved && Math.hypot(p.x - ptr.sx, p.y - ptr.sy) > 5 * K) {
+        ptr.moved = true; st.lifted = true;
         liftStone(st);
         stones.splice(stones.indexOf(st), 1); stones.push(st);
         rebuildMask();
+        haptic(4);
       }
       if (ptr.moved) { st.x = clamp(p.x + ptr.ox, 0, W); st.y = clamp(p.y + ptr.oy, 0, H); }
-      ptr.x = p.x; ptr.y = p.y;
       return;
     }
     if (tool === "ripple") return;
     if (tool === "rake" && !ptr.has) {
       const d0 = Math.hypot(p.x - ptr.x, p.y - ptr.y);
-      if (d0 < 4) return;
+      if (d0 < 4 * K) return;
       ptr.dx = (p.x - ptr.x) / d0; ptr.dy = (p.y - ptr.y) / d0; ptr.has = true;
     }
-    if (dist < 0.5) return;
-    feedSpeed(dist, ts - ptr.t);
+    const t0 = ptr.t, dist = strokeTo(ptr, p.x, p.y, tines, tool);
+    if (!dist) return;
+    const css = dist / K, dt = ts - t0;
     ptr.t = ts;
-    const sx = ddx / dist, sy = ddy / dist;
-    let ndx = ptr.dx * 0.6 + sx * 0.4, ndy = ptr.dy * 0.6 + sy * 0.4;
-    const nl = Math.hypot(ndx, ndy) || 1; ndx /= nl; ndy /= nl;
-    const steps = Math.max(1, Math.ceil(dist / 2)), len = dist / steps;
-    for (let k = 1; k <= steps; k++) {
-      const f = k / steps, cx = ptr.x + ddx * f, cy = ptr.y + ddy * f;
-      const dx = ptr.dx + (ndx - ptr.dx) * f, dy = ptr.dy + (ndy - ptr.dy) * f, l = Math.hypot(dx, dy) || 1;
-      if (tool === "rake") rakeStamp(cx, cy, dx / l, dy / l, len);
-      else smoothStamp(cx, cy);
+    feedSpeed(css, dt);
+    ptr.travel += css;
+    if (ptr.travel > 40) { ptr.travel = 0; haptic(2); }
+    if (tool === "rake") {
+      Object.assign(rakeVis, { x: p.x, y: p.y, dx: ptr.dx, dy: ptr.dy, on: true, ghost: false, n: tines });
+      if (!reduceMotion && css / Math.max(dt, 4) > 0.7 && grains.length < 60) spawnGrains(p.x, p.y, ptr.dx, ptr.dy, tines * SP / 2);
     }
-    ptr.dx = ndx; ptr.dy = ndy; ptr.x = p.x; ptr.y = p.y;
-    if (tool === "rake") { rakeVis.x = p.x; rakeVis.y = p.y; rakeVis.dx = ndx; rakeVis.dy = ndy; rakeVis.on = true; }
   }
 
   garden.addEventListener("pointermove", e => {
     if (!ptr || e.pointerId !== ptr.id) return;
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
     for (const ev of (evs.length ? evs : [e])) moveTo(pos(ev), ev.timeStamp);
   });
 
@@ -761,10 +959,13 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     if (!ptr || e.pointerId !== ptr.id) return;
     if (tool === "stone" && ptr.stone) {
       const st = ptr.stone;
-      if (ptr.moved) { rebuildMask(); stoneRings(st); thud(0.7, st.x); }
-      else { liftStone(st); stones.splice(stones.indexOf(st), 1); rebuildMask(); thud(0.35, st.x); }
+      if (ptr.moved) { st.lifted = false; rebuildMask(); stoneRings(st); st.bounce = 1; stoneSound(0.8, st.x); haptic([6, 30, 3]); }
+      else { st.lifted = true; liftStone(st); stones.splice(stones.indexOf(st), 1); rebuildMask(); stoneSound(0.5, st.x, true); haptic(4); }
     }
-    ptr = null; rakeVis.on = false; audTarget = 0;
+    if (tool === "rake" && ptr.has) moundStamp(ptr.x, ptr.y, ptr.dx, ptr.dy, tines);
+    if (!usedTools.has(tool)) { usedTools.add(tool); hintEl.style.opacity = 0; }
+    ptr = null; rakeVis.on = false;
+    dock.classList.remove("drawing");
   }
   garden.addEventListener("pointerup", endPointer);
   garden.addEventListener("pointercancel", endPointer);
@@ -782,6 +983,7 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     document.querySelectorAll(".tool[data-tool]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tool === t));
     tinesEl.classList.toggle("off", t !== "rake");
     hintEl.textContent = HINTS[t];
+    hintEl.style.opacity = usedTools.has(t) ? 0 : 1;
     garden.style.cursor = t === "stone" ? "pointer" : "crosshair";
   }
   document.querySelectorAll(".tool[data-tool]").forEach(b => b.addEventListener("click", () => { initAudio(); setTool(b.dataset.tool); }));
@@ -791,12 +993,43 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }));
   document.getElementById("t-sound").addEventListener("click", () => { initAudio(); setSound(!soundOn); });
 
-  let clearing = 0;
-  document.getElementById("t-clear").addEventListener("click", () => {
+  // "Nuevo": hold to rake the whole garden again, so nothing is erased by accident
+  const newBtn = document.getElementById("t-new");
+  let holdTimer = 0;
+  function startSweep() {
     initAudio();
-    clearing = 34;
-    audTarget = 0.7; lastMoveT = performance.now() + 500;
+    if (sweep) return;
+    sweep = { x: -SP * 2, speed: W / 2600 };
+    haptic(6);
+  }
+  newBtn.addEventListener("pointerdown", e => {
+    initAudio();
+    newBtn.classList.add("holding");
+    holdTimer = setTimeout(() => { newBtn.classList.remove("holding"); startSweep(); }, 800);
   });
+  const cancelHold = () => { clearTimeout(holdTimer); newBtn.classList.remove("holding"); };
+  newBtn.addEventListener("pointerup", cancelHold);
+  newBtn.addEventListener("pointerleave", cancelHold);
+  newBtn.addEventListener("pointercancel", cancelHold);
+  newBtn.addEventListener("click", e => { if (e.detail === 0) startSweep(); });
+
+  function sweepStep(dt) {
+    const x0 = sweep.x, x1 = Math.min(W + SP * 2, x0 + sweep.speed * dt), edge = 8 * K;
+    const a = Math.max(0, Math.floor(x0 - edge)), b = Math.min(W, Math.ceil(x1));
+    for (let y = 0; y < H; y++) for (let x = a; x < b; x++) {
+      const i = y * W + x;
+      if (mask[i]) continue;
+      const w = 1 - smooth(x1 - edge, x1, x);
+      hgt[i] += (linePattern(x, y) - hgt[i]) * w;
+    }
+    markDirty(a, 0, b, H);
+    sweep.x = x1;
+    audTarget = 0.55; lastMoveT = performance.now();
+    if (x1 >= W + SP * 2) {
+      for (const st of stones) stoneRings(st);
+      sweep = null; audTarget = 0;
+    }
+  }
 
   window.addEventListener("keydown", e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -804,76 +1037,101 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
     if (map[e.key]) setTool(map[e.key]);
     else if (e.key === "s" || e.key === "S") { initAudio(); setSound(!soundOn); }
   });
-
-  document.addEventListener("visibilitychange", () => {
-    if (!ac) return;
-    document.hidden ? ac.suspend() : ac.resume();
-  });
-
+  document.addEventListener("visibilitychange", () => { if (ac) document.hidden ? ac.suspend() : ac.resume(); });
   let rt = 0;
   window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => setup(true), 160); });
 
+  // ---------- Ghost demo: if nobody touches the garden, a faint rake shows how ----------
+  function startDemo() {
+    if (interacted || reduceMotion) return;
+    const portrait = H > W;
+    const y0 = H * (portrait ? 0.27 : 0.24), xa = W * 0.1, xb = W * (portrait ? 0.9 : 0.55);
+    demo = { t: 0, dur: 2800, path: e => ({ x: xa + (xb - xa) * e, y: y0 + Math.sin(e * TAU * 0.9) * H * 0.04 }) };
+    const p = demo.path(0);
+    demo.s = { x: p.x, y: p.y, dx: 1, dy: 0 };
+  }
+  setTimeout(startDemo, 2200);
+
   // ---------- Main loop ----------
-  let lastT = performance.now();
+  let lastT = performance.now(), t0 = lastT;
   function frame(now) {
     const dt = Math.min(50, now - lastT); lastT = now;
 
-    if (ptr && tool === "ripple") {
-      const maxR = clamp(Math.min(W, H) * 0.42, 90, 300);
+    if (ptr && tool === "ripple" && ptr.growing) {
+      const maxR = clamp(Math.min(W, H) * 0.42, 90 * K, 300 * K);
       if (ptr.r < maxR) {
         ptr.rPrev = ptr.r;
-        ptr.r = Math.min(maxR, ptr.r + dt * 0.075);
+        ptr.r = Math.min(maxR, ptr.r + dt * 0.075 * K);
         rippleStamp(ptr.sx, ptr.sy, ptr.rPrev, ptr.r);
-        audTarget = 0.3 + 0.25 * Math.sin(now / 260) ** 2;
-      } else audTarget = 0;
+        const rings = Math.floor(ptr.r / SP);
+        if (rings > ptr.rings) { ptr.rings = rings; tick(ptr.sx); haptic(3); }
+        audTarget = 0.28; lastMoveT = now;
+      } else { ptr.growing = false; audTarget = 0; }
     }
 
-    if (clearing > 0) {
-      clearing--;
-      const f = clearing === 0 ? 0 : 0.86;
-      for (let i = 0; i < hgt.length; i++) if (!mask[i]) hgt[i] *= f;
-      markDirty(0, 0, W, H);
+    if (sweep) sweepStep(dt);
+
+    if (demo) {
+      demo.t += dt;
+      const u = Math.min(1, demo.t / demo.dur), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      const p = demo.path(e);
+      strokeTo(demo.s, p.x, p.y, 5, "rake");
+      Object.assign(rakeVis, { x: p.x, y: p.y, dx: demo.s.dx, dy: demo.s.dy, on: u < 1, ghost: true, n: 5 });
+      if (u >= 1) { moundStamp(p.x, p.y, demo.s.dx, demo.s.dy, 5); demo = null; }
     }
 
     rakeVis.a += ((rakeVis.on ? 1 : 0) - rakeVis.a) * 0.2;
+    for (const st of stones) {
+      st.lift += ((st.lifted && ptr && ptr.stone === st ? 1 : 0) - st.lift) * 0.25;
+      if (st.bounce > 0) st.bounce = Math.max(0, st.bounce - dt / 150);
+    }
+    for (let k = grains.length - 1; k >= 0; k--) {
+      const g = grains[k]; g.life += dt; g.x += g.vx * dt; g.y += g.vy * dt; g.vx *= 0.9; g.vy *= 0.9;
+      if (g.life > g.max) grains.splice(k, 1);
+    }
 
     if (!reduceMotion) {
       nextPetal -= dt;
-      if (nextPetal <= 0 && petals.length < 7) { spawnPetal(); nextPetal = 3500 + Math.random() * 6000; }
+      if (nextPetal <= 0 && petals.length < 4) { spawnPetal(); nextPetal = rand(9000, 18000); }
       for (let k = petals.length - 1; k >= 0; k--) {
         const p = petals[k];
         p.life += dt;
         if (!p.landed) {
           p.ph += dt * 0.004;
-          p.x += (p.vx + Math.sin(p.ph * 0.7) * 0.012) * dt;
-          p.y += (p.vy + Math.cos(p.ph) * 0.006) * dt;
+          p.x += (p.vx + Math.sin(p.ph * 0.7) * 0.012 * K) * dt;
+          p.y += (p.vy + Math.cos(p.ph) * 0.006 * K) * dt;
           p.rot += p.vr * dt;
           p.alpha = Math.min(1, p.life / 800) * 0.92;
           if (p.y > H * p.land || p.x > W * 0.95) { p.landed = true; p.ph = 0.3; p.rest = 0; }
-          if (p.x > W + 30 || p.y > H + 30) petals.splice(k, 1);
         } else {
           p.rest += dt;
-          p.alpha = 0.85 * (1 - smooth(9000, 14000, p.rest));
-          if (p.rest > 14000) petals.splice(k, 1);
+          p.alpha = 0.85 * (1 - smooth(10000, 16000, p.rest));
+          if (p.rest > 16000) petals.splice(k, 1);
         }
       }
+      const el = (now - t0) / 1000;
+      const cx = (Math.sin(el / 190) * 0.5 + 0.5) * 30, cy = (Math.cos(el / 260) * 0.5 + 0.5) * 18;
+      cloudsEl.style.transform = `translate(${-cx}vw, ${-cy}vh)`;
+      const sway = Math.sin(el * TAU * 0.03) * 1.2 + Math.sin(el * 1.7) * 0.25;
+      leavesEl.style.transform = `rotate(${sway}deg)`;
+      warmEl.style.opacity = (0.04 + 0.035 * Math.sin(el / 600 * TAU)).toFixed(3);
     }
 
     flush();
-    drawTop();
-    updateAudio(now);
+    drawTop(now);
+    updateAudio(now, dt);
     requestAnimationFrame(frame);
   }
 
-  // ---------- First garden: raked lines with a sanzon stone group ----------
+  // ---------- First garden: raked lines and a sanzon stone group ----------
   setup(false);
   {
-    const base = clamp(Math.min(W, H) * 0.08, 28, 70);
+    const base = clamp(Math.min(W, H) / K * 0.08, 28, 70) * K;
     const portrait = H > W;
     const group = portrait
-      ? [[0.62, 0.40, 1.0], [0.78, 0.48, 0.58], [0.30, 0.66, 0.72]]
-      : [[0.64, 0.44, 1.0], [0.73, 0.56, 0.58], [0.28, 0.62, 0.74]];
-    for (const [fx, fy, k] of group) addStone(W * fx, H * fy, base * k);
+      ? [[0.62, 0.42, 1.0], [0.79, 0.50, 0.58], [0.30, 0.67, 0.72]]
+      : [[0.64, 0.46, 1.0], [0.74, 0.58, 0.58], [0.28, 0.64, 0.74]];
+    for (const [fx, fy, k] of group) { const st = addStone(W * fx, H * fy, base * k); st.bounce = 0; }
   }
   requestAnimationFrame(frame);
 })();
