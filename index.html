@@ -471,15 +471,16 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
   }
 
   // ---------- Stones ----------
+  // Pale, polished river stones
   const TONES = [
-    [112, 111, 106],  // slate
-    [134, 125, 110],  // warm granite
-    [84, 86, 82],     // basalt
-    [104, 109, 99],   // green-grey river stone
+    [192, 191, 187],
+    [182, 182, 179],
+    [200, 197, 190],
+    [174, 175, 174],
   ];
 
   function makeStone(x, y, r) {
-    const asp = rand(1.05, 1.45);
+    const asp = rand(1.0, 1.28);
     const planes = [];
     const np = 3 + ((Math.random() * 3) | 0);
     for (let k = 0; k < np; k++) {
@@ -490,14 +491,13 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       x, y, a: r * asp, b: r / Math.sqrt(asp), rot: Math.random() * Math.PI,
       ph: [Math.random() * TAU, Math.random() * TAU, Math.random() * TAU, Math.random() * TAU],
       tone: TONES[(Math.random() * TONES.length) | 0], planes,
-      moss: Math.random() < 0.6, seed: (Math.random() * 1e6) | 0,
+      moss: false, seed: (Math.random() * 1e6) | 0,
       body: null, shadow: null, R: 0, lift: 0, bounce: 0,
     };
   }
 
   function stoneRho(st, t) {
-    return 1 + 0.07 * Math.sin(2 * t + st.ph[0]) + 0.045 * Math.sin(3 * t + st.ph[1])
-             + 0.025 * Math.sin(5 * t + st.ph[2]) + 0.012 * Math.sin(9 * t + st.ph[3]);
+    return 1 + 0.035 * Math.sin(2 * t + st.ph[0]) + 0.015 * Math.sin(3 * t + st.ph[1]);
   }
   // Normalised distance: < 1 inside the outline, 1 on it.
   function stoneN(st, x, y) {
@@ -532,11 +532,8 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
       const i = y * S + x;
       nn[i] = n;
       if (n > 1.03) continue;
-      let h = Math.pow(Math.max(0, 1 - n * n), 0.35);
-      for (const p of st.planes) h = smin(h, p.c - (p.ux * ex + p.uy * ey) * p.k, 0.07);
-      h += (fbm(x * f * 0.09, y * f * 0.09, 3, seed) - 0.5) * 0.09;
-      h += (vnoise(x * f * 0.6, y * f * 0.6, seed + 9) - 0.5) * 0.018;
-      hb[i] = Math.max(0, h) * m * 0.75;
+      const h = Math.pow(Math.max(0, 1 - n * n), 0.6);
+      hb[i] = h * m * 0.55;
     }
     const body = document.createElement("canvas"); body.width = body.height = S;
     const bc = body.getContext("2d"), id = bc.createImageData(S, S), d = id.data;
@@ -551,15 +548,12 @@ h1 .latin { font-size: .62em; font-weight: 500; letter-spacing: .18em; text-tran
         const il = 1 / Math.hypot(gx, gy, 1);
         const Nx = -gx * il, Ny = -gy * il, Nz = il;
         const diff = Math.max(0, Nx * LX + Ny * LY + Nz * LZ);
-        const spec = Math.pow(Math.max(0, (Nx * hx + Ny * hy + Nz * hz) / hl), 8) * 0.08;
-        const tone = 1 + (fbm(x * f * 0.035, y * f * 0.035, 2, seed + 3) - 0.5) * 0.18;
-        const pit = 1 + (vnoise(x * f * 0.9, y * f * 0.9, seed + 4) - 0.5) * 0.12;
-        lightAmt = (0.3 + 0.8 * diff) * tone * pit;
-        const vein = fbm(x * f * 0.05, y * f * 0.05, 3, seed + 7);
-        const v = 1 - smooth(0.0, 0.014, Math.abs(vein - 0.5));
-        r = tr * lightAmt + 255 * spec + v * 26 * diff;
-        g = tg * lightAmt + 255 * spec + v * 25 * diff;
-        b = tb * lightAmt + 255 * spec + v * 22 * diff;
+        const spec = Math.pow(Math.max(0, (Nx * hx + Ny * hy + Nz * hz) / hl), 16) * 0.16;
+        const tone = 1 + (fbm(x * f * 0.02, y * f * 0.02, 2, seed + 3) - 0.5) * 0.06;
+        lightAmt = (0.52 + 0.6 * diff) * tone;
+        r = tr * lightAmt + 255 * spec;
+        g = tg * lightAmt + 255 * spec;
+        b = tb * lightAmt + 255 * spec + 4;
         alpha = clamp((1 - n) * rAvg / (1.5 * K), 0, 1);
       }
       // moss cushions hugging the base
